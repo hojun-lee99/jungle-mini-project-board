@@ -7,3 +7,6 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# npm
+node_modules
