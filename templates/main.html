@@ -38,7 +38,7 @@
             </nav>
 
             <div class="sidebar-bottom">
-                <button class="logout">
+                <button onclick="logout()" class="logout">
                     <span class="material-symbols-outlined">
                         logout
                     </span>
@@ -224,6 +224,21 @@
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && modal.classList.contains("is-open")) closeModal();
         });
+
+        function logout() {
+            $.ajax({
+                type: "POST",
+                url: "/api/auth/logout",
+                data: {},
+                success: function () {
+                    alert('로그아웃');
+                    location.reload(true);
+                },
+                error: function () {
+                    alert('로그아웃 실패');
+                }
+            })
+        }
     </script>
 
 
