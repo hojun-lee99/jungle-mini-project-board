@@ -21,6 +21,7 @@ CORS(app, supports_credentials=True)
 app.config["JWT_SECRET_KEY"] = Config.SECRET_KEY
 app.config["JWT_TOKEN_LOCATION"] = ['cookies']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # fetch/AJAX에서 X-CSRF-TOKEN 미전송 시 POST 401 방지
 jwt = JWTManager(app)
 # !!! 로컬 db 설정에 맞춰 수정 필요
 client = MongoClient("mongodb://localhost:27017")
@@ -38,6 +39,18 @@ app.register_blueprint(boards_bp)
 @app.route('/')
 def home():
     return render_template('login.html')
+
+
+@app.route('/main')
+def main():
+    """로그인 후 내 보드 목록 페이지."""
+    return render_template('main.html')
+
+
+@app.route('/boards/<public_id>')
+def board_page(public_id: str):
+    """칠판(화이트보드) 페이지. 보드 및 포스트잇 렌더링."""
+    return render_template('board.html', public_id=public_id)
 
 # 일단은 access token만 httponly로 발급 시간이 된다면 refresh token도 발급
 @app.route('/api/auth/login', methods=['POST'])
