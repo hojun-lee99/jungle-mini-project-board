@@ -102,9 +102,26 @@ $(document).ready(function () {
     console.log('이미지 업로드 모달을 엽니다.');
   });
 
-  // 햄버거 메뉴
-  $('#btn-menu').on('click', function () {
-    console.log('사이드바 메뉴를 엽니다.');
+  // 햄버거 메뉴 → 우측 윙바 오버레이 열기
+  function openWingbar() {
+    $('#wingbar-backdrop, #wingbar').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeWingbar() {
+    $('#wingbar-backdrop, #wingbar').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+
+  $('#btn-menu').on('click', openWingbar);
+  $('#btn-close-wingbar').on('click', closeWingbar);
+  $('#wingbar-backdrop').on('click', closeWingbar);
+
+  // 로그아웃
+  $('#btn-logout').on('click', function () {
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .then(() => {
+        closeWingbar();
+        window.location.href = '/';
+      })
+      .catch(() => alert('로그아웃에 실패했습니다.'));
   });
 
   // 보드 빈 공간 더블클릭 → 새 포스트잇 생성

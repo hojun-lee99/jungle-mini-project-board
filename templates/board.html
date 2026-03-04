@@ -26,6 +26,35 @@
         overflow: hidden;
         cursor: move;
       }
+      .wingbar-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 200;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+      }
+      .wingbar-backdrop.is-open {
+        opacity: 1;
+        visibility: visible;
+      }
+      .wingbar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 280px;
+        max-width: 90vw;
+        background: white;
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+        z-index: 201;
+        transform: translateX(100%);
+        transition: transform 0.25s ease-out;
+      }
+      .wingbar.is-open {
+        transform: translateX(0);
+      }
     </style>
     <link
       href="{{ url_for('static', filename='css/output.css') }}"
@@ -75,6 +104,23 @@
       class="min-w-full min-h-[calc(100vh-6rem)] bg-logo relative z-10 pt-24"
       data-public-id="{{ public_id }}"
     ></main>
+
+    <!-- 우측 윙바 오버레이 -->
+    <div class="wingbar-backdrop" id="wingbar-backdrop" aria-hidden="true"></div>
+    <aside class="wingbar" id="wingbar" aria-hidden="true">
+      <div class="flex justify-between items-center p-6 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-700">메뉴</h2>
+        <button type="button" id="btn-close-wingbar" class="p-1 rounded hover:bg-gray-100 transition" aria-label="메뉴 닫기">
+          <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <nav class="p-4 space-y-1">
+        <a href="/" class="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition">내 보드 목록</a>
+        <button type="button" id="btn-logout" class="block w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition">로그아웃</button>
+      </nav>
+    </aside>
 
     <script src="{{ url_for('static', filename='js/board.js') }}"></script>
   </body>
