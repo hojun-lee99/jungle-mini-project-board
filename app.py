@@ -40,6 +40,12 @@ def home():
     return render_template('login.html')
 
 
+@app.route('/main')
+def main():
+    """로그인 후 내 보드 목록 페이지."""
+    return render_template('main.html')
+
+
 @app.route('/boards/<public_id>')
 def board_page(public_id: str):
     """칠판(화이트보드) 페이지. 보드 및 포스트잇 렌더링."""

@@ -17,7 +17,7 @@ $(document).ready(function () {
       xhrFields: { withCredentials: true },
       success: function (data) {
         // 로그인 성공 시 메인(내 칠판 목록) 페이지로 리다이렉트
-        window.location.href = "/";
+        window.location.href = "/main";
       },
       error: function (xhr) {
         const msg = xhr.responseJSON?.error || "로그인에 실패했습니다.";
