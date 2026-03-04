@@ -57,3 +57,24 @@ def register_user(data):
     "user_id": user_id,
     "username": username
   }, 201
+
+
+def create_test_user():
+  """
+  UI 없이 테스트 사용자(test/test)를 생성합니다.
+  이미 존재하면 아무 작업도 하지 않습니다.
+  """
+  username = "test"
+  password = "test"
+
+  if db.users.find_one({"username": username}):
+    return {"message": f"사용자 '{username}'가 이미 존재합니다.", "created": False}
+
+  user_id = str(uuid.uuid4())
+  hashed_pw = generate_password_hash(password)
+  db.users.insert_one({
+    "user_id": user_id,
+    "username": username,
+    "password": hashed_pw
+  })
+  return {"message": f"사용자 '{username}' 생성 완료", "created": True}
