@@ -1,8 +1,14 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, make_response, render_template, jsonify, request
 from flask_cors import CORS
 from config import Config
 from services import register_user, login_user
-from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    jwt_required,
+    set_access_cookies,
+    unset_jwt_cookies,
+)
 from datetime import timedelta
 from pymongo import MongoClient
 from routes.boards import boards_bp
@@ -50,6 +56,15 @@ def api_login():
     set_access_cookies(response, access_token)
 
     return response, statuscode
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+@jwt_required()
+def api_logout():
+    """세션(JWT 쿠키) 무효화. 204 No Content 반환."""
+    response = make_response("", 204)
+    unset_jwt_cookies(response)
+    return response
 
 
 @app.route('/api/auth/register', methods=['POST'])
