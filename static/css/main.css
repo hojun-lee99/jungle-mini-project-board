@@ -193,7 +193,14 @@ div {
   font-size:16px;
 }
 
-.share-btn{
+.board-actions{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.share-btn,
+.delete-btn{
   border:0;
   background:transparent;
   cursor:pointer;
@@ -201,9 +208,21 @@ div {
   align-items:center;
   justify-content:center;
   padding:6px;
+  color:#6b7280;
+  transition:color 0.2s;
 }
 
-.share-btn .material-symbols-outlined{
+.share-btn:hover,
+.delete-btn:hover{
+  color:#374151;
+}
+
+.delete-btn:hover{
+  color:#dc2626;
+}
+
+.share-btn .material-symbols-outlined,
+.delete-btn .material-symbols-outlined{
   font-size:22px;
 }
 

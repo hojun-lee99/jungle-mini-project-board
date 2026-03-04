@@ -9,6 +9,7 @@
 - 포스트잇 수정/이동 (PATCH /api/boards/<public_id>/notes/<note_id>)
 - 포스트잇 삭제 (DELETE /api/boards/<public_id>/notes/<note_id>)
 """
+import os
 import uuid
 
 from bson import ObjectId
@@ -144,11 +145,13 @@ def list_boards():
 # GET /api/boards/<public_id> - 보드 조회
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>", methods=["GET"])
+@jwt_required(optional=True)
 def get_board(public_id: str):
     """
     보드 조회 API
-    - 인증: 불필요
+    - 인증: 불필요 (로그인 시 current_user_id 포함)
     """
+    current_user_id = _get_current_user_id()
     db = getattr(current_app, "db", None)
     if db is None:
         return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
@@ -168,10 +171,14 @@ def get_board(public_id: str):
 
     image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
 
-    return jsonify({
+    payload = {
         "board": _serialize_board(board),
         "notes": [_serialize_note(n, image_base_url) for n in notes_list],
-    }), 200
+    }
+    if current_user_id:
+        payload["current_user_id"] = str(current_user_id)
+
+    return jsonify(payload), 200
 
 
 # ---------------------------------------------------------------------------
@@ -361,6 +368,73 @@ def create_note(public_id: str):
 
     image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
     return jsonify(_serialize_note(note_doc, image_base_url)), 201
+
+
+# ---------------------------------------------------------------------------
+# POST /api/boards/<public_id>/images - 이미지 업로드 (포스트잇용)
+# ---------------------------------------------------------------------------
+ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+MAX_IMAGE_SIZE = 3 * 1024 * 1024  # 3MB
+
+
+@boards_bp.route("/<public_id>/images", methods=["POST"])
+@jwt_required(optional=True)
+def upload_image(public_id: str):
+    """포스트잇에 첨부할 이미지 업로드. 인증 필수."""
+    user_id = _get_current_user_id()
+    if not user_id:
+        return jsonify({
+            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
+        }), 401
+
+    db = getattr(current_app, "db", None)
+    if db is None:
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+
+    boards = db["boards"]
+    board = boards.find_one({"public_id": public_id})
+    if not board:
+        return jsonify({
+            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
+        }), 404
+
+    if "file" not in request.files:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "이미지 파일이 필요합니다.", "details": {}}
+        }), 400
+
+    file = request.files["file"]
+    if not file or not file.filename:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "파일을 선택해 주세요.", "details": {}}
+        }), 400
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_IMAGE_EXT:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "jpg, jpeg, png, gif, webp만 업로드 가능합니다.", "details": {}}
+        }), 400
+
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_IMAGE_SIZE:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "이미지는 3MB 이하여야 합니다.", "details": {}}
+        }), 400
+
+    base_dir = current_app.static_folder or "static"
+    upload_dir = os.path.join(base_dir, "uploads", "boards", public_id)
+    os.makedirs(upload_dir, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(upload_dir, filename)
+    file.save(filepath)
+
+    image_key = f"uploads/boards/{public_id}/{filename}"
+    base_url = request.url_root.rstrip("/")
+    image_url = f"{base_url}/static/{image_key}"
+
+    return jsonify({"image_key": image_key, "url": image_url}), 201
 
 
 # ---------------------------------------------------------------------------

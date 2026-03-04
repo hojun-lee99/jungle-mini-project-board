@@ -148,10 +148,14 @@
             boardList.innerHTML = boards
                 .map(
                     (b) =>
-                        '<li class="board-item">' +
+                        '<li class="board-item" data-public-id="' + escapeHtml(b.public_id) + '">' +
                         '<a href="/boards/' + b.public_id + '" class="board-title">' + escapeHtml(b.title || "제목 없음") + "</a>" +
+                        '<div class="board-actions">' +
                         '<button class="share-btn" type="button" aria-label="공유하기" data-url="' + escapeHtml(window.location.origin + "/boards/" + b.public_id) + '">' +
-                        '<span class="material-symbols-outlined">share</span></button></li>'
+                        '<span class="material-symbols-outlined">share</span></button>' +
+                        '<button class="delete-btn" type="button" aria-label="삭제" data-public-id="' + escapeHtml(b.public_id) + '" data-title="' + escapeHtml(b.title || "제목 없음") + '">' +
+                        '<span class="material-symbols-outlined">delete</span></button>' +
+                        '</div></li>'
                 )
                 .join("");
             boardList.querySelectorAll(".share-btn").forEach((el) => {
@@ -161,12 +165,44 @@
                     navigator.clipboard.writeText(url).then(() => alert("보드 링크가 클립보드에 복사되었습니다.")).catch(() => alert("복사 실패: " + url));
                 });
             });
+            boardList.querySelectorAll(".delete-btn").forEach((el) => {
+                el.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    const publicId = el.dataset.publicId;
+                    const title = el.dataset.title;
+                    if (!confirm('"' + title + '" 보드를 삭제하시겠습니까?')) return;
+                    deleteBoard(publicId, el.closest(".board-item"));
+                });
+            });
         }
 
         function escapeHtml(s) {
             const div = document.createElement("div");
             div.textContent = s;
             return div.innerHTML;
+        }
+
+        function deleteBoard(publicId, listItem) {
+            fetch("/api/boards/" + publicId, {
+                method: "DELETE",
+                credentials: "include",
+            })
+                .then((r) => {
+                    if (r.status === 401) {
+                        alert("로그인이 필요합니다.");
+                        return;
+                    }
+                    if (r.status === 403) {
+                        alert("보드 생성자만 삭제할 수 있습니다.");
+                        return;
+                    }
+                    if (!r.ok) throw new Error("삭제에 실패했습니다.");
+                    listItem.remove();
+                    if (boardList.querySelectorAll(".board-item").length === 0) {
+                        boardList.innerHTML = "<li class='board-item'><span class='board-title'>보드가 없습니다. + 버튼으로 새 보드를 만드세요.</span></li>";
+                    }
+                })
+                .catch((err) => alert(err.message));
         }
 
         // 보드 만들기

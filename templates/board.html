@@ -55,6 +55,164 @@
       .wingbar.is-open {
         transform: translateX(0);
       }
+      .wingbar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .wingbar-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+      }
+      .wingbar-close {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        font-size: 24px;
+        line-height: 1;
+        color: #6b7280;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: background 0.2s, color 0.2s;
+      }
+      .wingbar-close:hover {
+        background: #f3f4f6;
+        color: #111827;
+      }
+      .wingbar-body {
+        padding: 16px;
+      }
+      .wingbar-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        color: #374151;
+        font-size: 15px;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: background 0.2s, color 0.2s;
+      }
+      .wingbar-item:hover {
+        background: #f3f4f6;
+        color: #111827;
+      }
+      .wingbar-item-icon {
+        font-size: 18px;
+        opacity: 0.8;
+      }
+      .wingbar-section {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+      }
+      .wingbar-section-title {
+        margin: 0 0 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .wingbar-note-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .wingbar-note-item {
+        padding: 10px 12px;
+        margin-bottom: 4px;
+        font-size: 13px;
+        color: #374151;
+        background: #f9fafb;
+        border-radius: 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .wingbar-note-item:last-child {
+        margin-bottom: 0;
+      }
+      .wingbar-empty {
+        margin: 0;
+        font-size: 13px;
+        color: #9ca3af;
+      }
+      /* 이미지 모달 */
+      .image-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+      }
+      .image-modal.is-open {
+        opacity: 1;
+        visibility: visible;
+      }
+      .image-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+      }
+      .image-modal-panel {
+        position: relative;
+        width: 90%;
+        max-width: 400px;
+        padding: 24px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      }
+      .image-modal-title {
+        margin: 0 0 16px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+      }
+      .image-modal-input {
+        display: block;
+        width: 100%;
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+      }
+      .image-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .image-modal-btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .image-modal-btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+      }
+      .image-modal-btn-primary {
+        background: #05D182;
+        color: white;
+      }
+      #btn-add-image.image-mode-active {
+        outline: 2px solid #05D182;
+        outline-offset: 2px;
+      }
     </style>
     <link
       href="{{ url_for('static', filename='css/output.css') }}"
@@ -81,7 +239,7 @@
           />
         </button>
 
-        <button id="btn-add-image" class="hover:scale-110 transition transform">
+        <button id="btn-add-image" class="hover:scale-110 transition transform" title="이미지 추가 모드 (클릭 후 보드에서 위치 선택)">
           <img
             src="{{ url_for('static', filename='icons/image.svg') }}"
             alt="이미지 추가"
@@ -105,22 +263,38 @@
       data-public-id="{{ public_id }}"
     ></main>
 
-    <!-- 우측 윙바 오버레이 -->
+    <!-- 우측 윙바 -->
     <div class="wingbar-backdrop" id="wingbar-backdrop" aria-hidden="true"></div>
     <aside class="wingbar" id="wingbar" aria-hidden="true">
-      <div class="flex justify-between items-center p-6 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-700">메뉴</h2>
-        <button type="button" id="btn-close-wingbar" class="p-1 rounded hover:bg-gray-100 transition" aria-label="메뉴 닫기">
-          <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+      <div class="wingbar-header">
+        <span class="wingbar-title">메뉴</span>
+        <button type="button" id="btn-close-wingbar" class="wingbar-close" aria-label="닫기">×</button>
       </div>
-      <nav class="p-4 space-y-1">
-        <a href="/" class="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition">내 보드 목록</a>
-        <button type="button" id="btn-logout" class="block w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition">로그아웃</button>
-      </nav>
+      <div class="wingbar-body">
+        <a href="/main" class="wingbar-item">
+          <span class="wingbar-item-icon">≡</span>
+          <span>내 보드 목록</span>
+        </a>
+        <div class="wingbar-section">
+          <h3 class="wingbar-section-title">내가 쓴 메모</h3>
+          <ul class="wingbar-note-list" id="wingbar-my-notes"></ul>
+          <p class="wingbar-empty" id="wingbar-my-notes-empty" style="display:none;">쓴 메모가 없습니다.</p>
+        </div>
+      </div>
     </aside>
+
+    <!-- 이미지 삽입 모달 -->
+    <div class="image-modal" id="image-modal" aria-hidden="true">
+      <div class="image-modal-backdrop" data-close="true"></div>
+      <div class="image-modal-panel">
+        <h3 class="image-modal-title">이미지 추가</h3>
+        <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif,image/webp" class="image-modal-input" />
+        <div class="image-modal-actions">
+          <button type="button" id="image-modal-cancel" class="image-modal-btn image-modal-btn-secondary">취소</button>
+          <button type="button" id="image-modal-confirm" class="image-modal-btn image-modal-btn-primary">추가</button>
+        </div>
+      </div>
+    </div>
 
     <script src="{{ url_for('static', filename='js/board.js') }}"></script>
   </body>
