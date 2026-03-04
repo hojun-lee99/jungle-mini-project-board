@@ -10,11 +10,11 @@
 - 포스트잇 삭제 (DELETE /api/boards/<public_id>/notes/<note_id>)
 """
 import uuid
-from datetime import datetime
 
-from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, request
 from pymongo import ReturnDocument
+
+from utils import error_response, parse_object_id, utc_now
 
 boards_bp = Blueprint("boards", __name__, url_prefix="/api/boards")
 
@@ -76,18 +76,16 @@ def create_board():
     """
     user_id = _get_current_user_id()
     if not user_id:
-        return jsonify({
-            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
-        }), 401
+        return error_response("UNAUTHORIZED", "로그인이 필요합니다.", 401)
 
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return error_response("INTERNAL_ERROR", "DB not configured.", 500)
 
     data = request.get_json(silent=True) or {}
     title = data.get("title") or ""
 
-    now = datetime.utcnow()
+    now = utc_now()
     public_id = str(uuid.uuid4())
 
     doc = {
@@ -118,13 +116,11 @@ def list_boards():
     """
     user_id = _get_current_user_id()
     if not user_id:
-        return jsonify({
-            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
-        }), 401
+        return error_response("UNAUTHORIZED", "로그인이 필요합니다.", 401)
 
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return error_response("INTERNAL_ERROR", "DB not configured.", 500)
 
     page = max(1, int(request.args.get("page", 1)))
     limit = min(100, max(1, int(request.args.get("limit", 20))))
@@ -152,16 +148,14 @@ def get_board(public_id: str):
     """
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return error_response("INTERNAL_ERROR", "DB not configured.", 500)
 
     boards = db["boards"]
     sticky_notes = db["sticky_notes"]
 
     board = boards.find_one({"public_id": public_id})
     if not board:
-        return jsonify({
-            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
-        }), 404
+        return error_response("BOARD_NOT_FOUND", "유효하지 않은 보드 링크입니다.", 404)
 
     board_id = board["_id"]
     notes_cursor = sticky_notes.find({"board_id": board_id}).sort("z_index", 1)
@@ -186,36 +180,28 @@ def update_board(public_id: str):
     """
     user_id = _get_current_user_id()
     if not user_id:
-        return jsonify({
-            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
-        }), 401
+        return error_response("UNAUTHORIZED", "로그인이 필요합니다.", 401)
 
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return error_response("INTERNAL_ERROR", "DB not configured.", 500)
 
     data = request.get_json(silent=True) or {}
     new_public_id = data.get("public_id")
     if not new_public_id:
-        return jsonify({
-            "error": {"code": "VALIDATION_ERROR", "message": "public_id가 필요합니다.", "details": {}}
-        }), 422
+        return error_response("VALIDATION_ERROR", "public_id가 필요합니다.", 422)
 
     boards = db["boards"]
     board = boards.find_one({"public_id": public_id})
     if not board:
-        return jsonify({
-            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
-        }), 404
+        return error_response("BOARD_NOT_FOUND", "유효하지 않은 보드 링크입니다.", 404)
 
     if str(board["owner_user_id"]) != str(user_id):
-        return jsonify({
-            "error": {"code": "FORBIDDEN", "message": "보드 생성자만 수정할 수 있습니다.", "details": {}}
-        }), 403
+        return error_response("FORBIDDEN", "보드 생성자만 수정할 수 있습니다.", 403)
 
     boards.update_one(
         {"_id": board["_id"]},
-        {"$set": {"public_id": new_public_id, "updated_at": datetime.utcnow()}}
+        {"$set": {"public_id": new_public_id, "updated_at": utc_now()}}
     )
 
     # TODO: board_invalidated WebSocket broadcast (기존 room)
@@ -235,13 +221,11 @@ def delete_board(public_id: str):
     """
     user_id = _get_current_user_id()
     if not user_id:
-        return jsonify({
-            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
-        }), 401
+        return error_response("UNAUTHORIZED", "로그인이 필요합니다.", 401)
 
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return error_response("INTERNAL_ERROR", "DB not configured.", 500)
 
     boards = db["boards"]
     sticky_notes = db["sticky_notes"]
@@ -249,16 +233,12 @@ def delete_board(public_id: str):
 
     board = boards.find_one({"public_id": public_id})
     if not board:
-        return jsonify({
-            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
-        }), 404
+        return error_response("BOARD_NOT_FOUND", "유효하지 않은 보드 링크입니다.", 404)
 
     if str(board["owner_user_id"]) != str(user_id):
-        return jsonify({
-            "error": {"code": "FORBIDDEN", "message": "보드 생성자만 삭제할 수 있습니다.", "details": {}}
-        }), 403
+        return error_response("FORBIDDEN", "보드 생성자만 삭제할 수 있습니다.", 403)
 
-    now = datetime.utcnow()
+    now = utc_now()
     board_id = board["_id"]
     owner_id = board["owner_user_id"]
 
@@ -271,9 +251,7 @@ def delete_board(public_id: str):
             "created_at": now,
         })
     except Exception:
-        return jsonify({
-            "error": {"code": "INTERNAL_ERROR", "message": "스냅샷 저장에 실패했습니다.", "details": {}}
-        }), 500
+        return error_response("INTERNAL_ERROR", "스냅샷 저장에 실패했습니다.", 500)
 
     # 2. notes 삭제
     sticky_notes.delete_many({"board_id": board_id})
@@ -298,31 +276,25 @@ def create_note(public_id: str):
     """
     user_id = _get_current_user_id()
     if not user_id:
-        return jsonify({
-            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
-        }), 401
+        return error_response("UNAUTHORIZED", "로그인이 필요합니다.", 401)
 
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return error_response("INTERNAL_ERROR", "DB not configured.", 500)
 
     boards = db["boards"]
     sticky_notes = db["sticky_notes"]
 
     board = boards.find_one({"public_id": public_id})
     if not board:
-        return jsonify({
-            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
-        }), 404
+        return error_response("BOARD_NOT_FOUND", "유효하지 않은 보드 링크입니다.", 404)
 
     board_id = board["_id"]
     data = request.get_json(silent=True) or {}
 
     text = data.get("text") or ""
     if len(text) > 500:
-        return jsonify({
-            "error": {"code": "VALIDATION_ERROR", "message": "text는 500자를 초과할 수 없습니다.", "details": {}}
-        }), 422
+        return error_response("VALIDATION_ERROR", "text는 500자를 초과할 수 없습니다.", 422)
 
     image_key = data.get("image_key") or ""
     x = int(data.get("x", 0))
@@ -335,13 +307,11 @@ def create_note(public_id: str):
         return_document=ReturnDocument.AFTER,
     )
     if not result:
-        return jsonify({
-            "error": {"code": "NOTE_LIMIT_EXCEEDED", "message": "보드당 포스트잇 최대 300개 제한을 초과했습니다.", "details": {}}
-        }), 403
+        return error_response("NOTE_LIMIT_EXCEEDED", "보드당 포스트잇 최대 300개 제한을 초과했습니다.", 403)
 
     z_index = result["next_z_index"]
 
-    now = datetime.utcnow()
+    now = utc_now()
     note_doc = {
         "board_id": board_id,
         "owner_user_id": user_id,
@@ -373,70 +343,51 @@ def update_note(public_id: str, note_id: str):
     """
     user_id = _get_current_user_id()
     if not user_id:
-        return jsonify({
-            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
-        }), 401
+        return error_response("UNAUTHORIZED", "로그인이 필요합니다.", 401)
 
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return error_response("INTERNAL_ERROR", "DB not configured.", 500)
 
     data = request.get_json(silent=True) or {}
     version = data.get("version")
     if version is None:
-        return jsonify({
-            "error": {"code": "VALIDATION_ERROR", "message": "version이 필요합니다.", "details": {}}
-        }), 422
+        return error_response("VALIDATION_ERROR", "version이 필요합니다.", 422)
 
     # NO_CHANGES: version만 있고 변경 필드 없음
     change_keys = {"text", "image_key", "x", "y"}
     has_change = any(k in data for k in change_keys)
     if not has_change:
-        return jsonify({
-            "error": {"code": "NO_CHANGES", "message": "변경할 필드가 없습니다.", "details": {}}
-        }), 400
+        return error_response("NO_CHANGES", "변경할 필드가 없습니다.", 400)
 
     boards = db["boards"]
     sticky_notes = db["sticky_notes"]
 
     board = boards.find_one({"public_id": public_id})
     if not board:
-        return jsonify({
-            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
-        }), 404
+        return error_response("BOARD_NOT_FOUND", "유효하지 않은 보드 링크입니다.", 404)
 
-    try:
-        oid = ObjectId(note_id)
-    except Exception:
-        return jsonify({
-            "error": {"code": "NOTE_NOT_FOUND", "message": "포스트잇을 찾을 수 없습니다.", "details": {}}
-        }), 404
+    oid = parse_object_id(note_id)
+    if oid is None:
+        return error_response("NOTE_NOT_FOUND", "포스트잇을 찾을 수 없습니다.", 404)
 
     note = sticky_notes.find_one({"_id": oid, "board_id": board["_id"]})
     if not note:
-        return jsonify({
-            "error": {"code": "NOTE_NOT_FOUND", "message": "포스트잇을 찾을 수 없습니다.", "details": {}}
-        }), 404
+        return error_response("NOTE_NOT_FOUND", "포스트잇을 찾을 수 없습니다.", 404)
 
     is_owner = str(note["owner_user_id"]) == str(user_id)
     is_board_owner = str(board["owner_user_id"]) == str(user_id)
     if not is_owner and not is_board_owner:
-        return jsonify({
-            "error": {"code": "FORBIDDEN", "message": "수정 권한이 없습니다.", "details": {}}
-        }), 403
+        return error_response("FORBIDDEN", "수정 권한이 없습니다.", 403)
 
     if note.get("version", 0) != version:
-        return jsonify({
-            "error": {"code": "CONFLICT", "message": "버전 충돌. 최신 데이터를 확인해주세요.", "details": {}}
-        }), 409
+        return error_response("CONFLICT", "버전 충돌. 최신 데이터를 확인해주세요.", 409)
 
     # update payload
-    update = {"$set": {"updated_at": datetime.utcnow(), "version": version + 1}}
+    update = {"$set": {"updated_at": utc_now(), "version": version + 1}}
     if "text" in data:
         if len(str(data["text"])) > 500:
-            return jsonify({
-                "error": {"code": "VALIDATION_ERROR", "message": "text는 500자를 초과할 수 없습니다.", "details": {}}
-            }), 422
+            return error_response("VALIDATION_ERROR", "text는 500자를 초과할 수 없습니다.", 422)
         update["$set"]["text"] = data["text"]
     if "image_key" in data:
         update["$set"]["image_key"] = data["image_key"] if data["image_key"] is not None else ""
@@ -459,9 +410,7 @@ def update_note(public_id: str, note_id: str):
         update,
     )
     if up.matched_count == 0:
-        return jsonify({
-            "error": {"code": "CONFLICT", "message": "버전 충돌. 최신 데이터를 확인해주세요.", "details": {}}
-        }), 409
+        return error_response("CONFLICT", "버전 충돌. 최신 데이터를 확인해주세요.", 409)
 
     updated = sticky_notes.find_one({"_id": oid})
     image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
@@ -479,42 +428,31 @@ def delete_note(public_id: str, note_id: str):
     """
     user_id = _get_current_user_id()
     if not user_id:
-        return jsonify({
-            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
-        }), 401
+        return error_response("UNAUTHORIZED", "로그인이 필요합니다.", 401)
 
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return error_response("INTERNAL_ERROR", "DB not configured.", 500)
 
     boards = db["boards"]
     sticky_notes = db["sticky_notes"]
 
     board = boards.find_one({"public_id": public_id})
     if not board:
-        return jsonify({
-            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
-        }), 404
+        return error_response("BOARD_NOT_FOUND", "유효하지 않은 보드 링크입니다.", 404)
 
-    try:
-        oid = ObjectId(note_id)
-    except Exception:
-        return jsonify({
-            "error": {"code": "NOTE_NOT_FOUND", "message": "포스트잇을 찾을 수 없습니다.", "details": {}}
-        }), 404
+    oid = parse_object_id(note_id)
+    if oid is None:
+        return error_response("NOTE_NOT_FOUND", "포스트잇을 찾을 수 없습니다.", 404)
 
     note = sticky_notes.find_one({"_id": oid, "board_id": board["_id"]})
     if not note:
-        return jsonify({
-            "error": {"code": "NOTE_NOT_FOUND", "message": "포스트잇을 찾을 수 없습니다.", "details": {}}
-        }), 404
+        return error_response("NOTE_NOT_FOUND", "포스트잇을 찾을 수 없습니다.", 404)
 
     is_owner = str(note["owner_user_id"]) == str(user_id)
     is_board_owner = str(board["owner_user_id"]) == str(user_id)
     if not is_owner and not is_board_owner:
-        return jsonify({
-            "error": {"code": "FORBIDDEN", "message": "삭제 권한이 없습니다.", "details": {}}
-        }), 403
+        return error_response("FORBIDDEN", "삭제 권한이 없습니다.", 403)
 
     sticky_notes.delete_one({"_id": oid, "board_id": board["_id"]})
     boards.update_one({"_id": board["_id"]}, {"$inc": {"note_count": -1}})
