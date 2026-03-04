@@ -7,11 +7,24 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <style>
       .bg-logo {
-        background-image: url(../static/icons/Jungle_by\ KRAFTON_Logo_G.png);
+        background-image: url('{{ url_for("static", filename="icons/Jungle_by KRAFTON_Logo_G.png") }}');
         background-repeat: no-repeat;
         background-position: center;
         background-size: 300px;
         opacity: 0.5;
+      }
+      .note {
+        position: absolute;
+        min-width: 120px;
+        min-height: 100px;
+        max-width: 200px;
+        padding: 8px;
+        background: #fef08a;
+        box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+        border-radius: 4px;
+        word-wrap: break-word;
+        overflow: hidden;
+        cursor: move;
       }
     </style>
     <link
@@ -59,7 +72,8 @@
 
     <main
       id="board-container"
-      class="w-480 h-270 bg-logo relative z-10 pt-24"
+      class="min-w-full min-h-[calc(100vh-6rem)] bg-logo relative z-10 pt-24"
+      data-public-id="{{ public_id }}"
     ></main>
 
     <script src="{{ url_for('static', filename='js/board.js') }}"></script>

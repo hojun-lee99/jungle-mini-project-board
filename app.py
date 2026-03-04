@@ -39,6 +39,12 @@ app.register_blueprint(boards_bp)
 def home():
     return render_template('login.html')
 
+
+@app.route('/boards/<public_id>')
+def board_page(public_id: str):
+    """칠판(화이트보드) 페이지. 보드 및 포스트잇 렌더링."""
+    return render_template('board.html', public_id=public_id)
+
 # 일단은 access token만 httponly로 발급 시간이 된다면 refresh token도 발급
 @app.route('/api/auth/login', methods=['POST'])
 def api_login():
