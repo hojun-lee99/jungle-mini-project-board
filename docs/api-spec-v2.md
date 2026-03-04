@@ -11,7 +11,7 @@
 ### 1.1 기본 규칙
 
 - **Base URL**: `{host}/api`
-- **인증**: 세션 기반 (로그인 사용자만 쓰기 작업 가능)
+- **인증**: JWT 기반 (로그인 사용자만 쓰기 작업 가능)
 - **Content-Type**: `application/json` (이미지 업로드 시 `multipart/form-data`)
 - **데이터 변경**: 모든 생성/수정/삭제는 HTTP로 수행 (WebSocket은 broadcast만 수행)
 - **z_index**: 서버 전용 필드. 클라이언트는 요청 시 `z_index`를 포함해도 안 되며, 서버가 자동 부여한다. 응답에서만 수신한다.  
@@ -114,7 +114,6 @@
 {
   "user_id": "uuid",
   "username": "string"
-  "JWT_token": "string"
 }
 ```
 
