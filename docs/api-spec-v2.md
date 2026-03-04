@@ -152,6 +152,7 @@
   "id": "objectid",
   "public_id": "uuid",
   "owner_user_id": "uuid",
+  "title": "string",
   "created_at": "datetime"
 }
 ```
@@ -179,6 +180,7 @@
       "id": "objectid",
       "public_id": "uuid",
       "owner_user_id": "uuid",
+      "title": "string",
       "created_at": "datetime"
     }
   ],
@@ -206,7 +208,8 @@
   "board": {
     "id": "objectid",
     "public_id": "uuid",
-    "owner_user_id": "uuid"
+    "owner_user_id": "uuid",
+    "title": "string"
   },
   "notes": [
     {
