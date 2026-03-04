@@ -150,6 +150,7 @@ def get_board(public_id: str):
     """
     보드 조회 API
     - 인증: 불필요 (로그인 시 current_user_id 포함)
+    - z_index: sticky_notes에는 서버가 원자적으로 부여한 값만 저장됨 (요구사항 4.4.1)
     """
     current_user_id = _get_current_user_id()
     db = getattr(current_app, "db", None)
@@ -159,15 +160,24 @@ def get_board(public_id: str):
     boards = db["boards"]
     sticky_notes = db["sticky_notes"]
 
-    board = boards.find_one({"public_id": public_id})
+    try:
+        board = boards.find_one({"public_id": str(public_id).strip()})
+    except Exception as e:
+        current_app.logger.exception("get_board find_one: %s", e)
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "보드를 불러올 수 없습니다.", "details": {}}}), 500
+
     if not board:
         return jsonify({
             "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
         }), 404
 
     board_id = board["_id"]
-    notes_cursor = sticky_notes.find({"board_id": board_id}).sort("z_index", 1)
-    notes_list = list(notes_cursor)
+    try:
+        notes_cursor = sticky_notes.find({"board_id": board_id}).sort([("z_index", 1), ("_id", 1)])
+        notes_list = list(notes_cursor)
+    except Exception as e:
+        current_app.logger.exception("get_board notes: %s", e)
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "보드를 불러올 수 없습니다.", "details": {}}}), 500
 
     image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
 
@@ -337,6 +347,7 @@ def create_note(public_id: str):
     x = int(data.get("x", 0))
     y = int(data.get("y", 0))
 
+    # z_index: 보드 단위 next_z_index로 원자적 부여 (요구사항 4.4.1)
     # 300개 제한: note_count < 300 조건부 $inc
     result = boards.find_one_and_update(
         {"_id": board_id, "note_count": {"$lt": 300}},
@@ -348,7 +359,7 @@ def create_note(public_id: str):
             "error": {"code": "NOTE_LIMIT_EXCEEDED", "message": "보드당 포스트잇 최대 300개 제한을 초과했습니다.", "details": {}}
         }), 403
 
-    z_index = result["next_z_index"]
+    z_index = result.get("next_z_index", 1)
 
     now = utc_now()
     note_doc = {
@@ -373,7 +384,7 @@ def create_note(public_id: str):
 # ---------------------------------------------------------------------------
 # POST /api/boards/<public_id>/images - 이미지 업로드 (포스트잇용)
 # ---------------------------------------------------------------------------
-ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif"}
 MAX_IMAGE_SIZE = 3 * 1024 * 1024  # 3MB
 
 
@@ -412,7 +423,7 @@ def upload_image(public_id: str):
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_IMAGE_EXT:
         return jsonify({
-            "error": {"code": "VALIDATION_ERROR", "message": "jpg, jpeg, png, gif, webp만 업로드 가능합니다.", "details": {}}
+            "error": {"code": "VALIDATION_ERROR", "message": "jpg, jpeg, png, gif만 업로드 가능합니다.", "details": {}}
         }), 400
 
     file.seek(0, os.SEEK_END)
