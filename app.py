@@ -12,6 +12,8 @@ from flask_jwt_extended import (
 from datetime import timedelta
 from pymongo import MongoClient
 from routes.boards import boards_bp
+from extensions import socketio
+import sockets
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -25,8 +27,12 @@ client = MongoClient("mongodb://localhost:27017")
 db = client["mydb"]
 app.db = db  # Blueprint에서 current_app.db로 접근
 
+socketio.init_app(app)
+
 # Blueprint 등록
 app.register_blueprint(boards_bp)
+
+
 
 
 @app.route('/')
@@ -79,4 +85,4 @@ def api_register():
     return jsonify(response_data), statuscode
 
 if __name__ == '__main__':  
-  app.run('0.0.0.0', port=5001, debug=True)
+  socketio.run('0.0.0.0', port=5001, debug=True)
