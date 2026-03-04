@@ -5,10 +5,16 @@
 - 보드 조회 (GET /api/boards/<public_id>)
 - 보드 public_id 변경 (PATCH /api/boards/<public_id>)
 - 보드 삭제 (DELETE /api/boards/<public_id>)
+- 포스트잇 생성 (POST /api/boards/<public_id>/notes)
+- 포스트잇 수정/이동 (PATCH /api/boards/<public_id>/notes/<note_id>)
+- 포스트잇 삭제 (DELETE /api/boards/<public_id>/notes/<note_id>)
 """
 import uuid
+from datetime import datetime
 
+from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, request
+from pymongo import ReturnDocument
 
 boards_bp = Blueprint("boards", __name__, url_prefix="/api/boards")
 
@@ -81,7 +87,7 @@ def create_board():
     data = request.get_json(silent=True) or {}
     title = data.get("title") or ""
 
-    now = __import__("datetime").datetime.utcnow()
+    now = datetime.utcnow()
     public_id = str(uuid.uuid4())
 
     doc = {
@@ -209,7 +215,7 @@ def update_board(public_id: str):
 
     boards.update_one(
         {"_id": board["_id"]},
-        {"$set": {"public_id": new_public_id, "updated_at": __import__("datetime").datetime.utcnow()}}
+        {"$set": {"public_id": new_public_id, "updated_at": datetime.utcnow()}}
     )
 
     # TODO: board_invalidated WebSocket broadcast (기존 room)
@@ -252,7 +258,7 @@ def delete_board(public_id: str):
             "error": {"code": "FORBIDDEN", "message": "보드 생성자만 삭제할 수 있습니다.", "details": {}}
         }), 403
 
-    now = __import__("datetime").datetime.utcnow()
+    now = datetime.utcnow()
     board_id = board["_id"]
     owner_id = board["owner_user_id"]
 
@@ -276,5 +282,241 @@ def delete_board(public_id: str):
     boards.delete_one({"_id": board_id})
 
     # TODO: board_invalidated WebSocket broadcast
+
+    return "", 204
+
+
+# ---------------------------------------------------------------------------
+# POST /api/boards/<public_id>/notes - 포스트잇 생성
+# ---------------------------------------------------------------------------
+@boards_bp.route("/<public_id>/notes", methods=["POST"])
+def create_note(public_id: str):
+    """
+    포스트잇 생성 API
+    - 인증: 필수
+    - 보드당 300개 제한
+    """
+    user_id = _get_current_user_id()
+    if not user_id:
+        return jsonify({
+            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
+        }), 401
+
+    db = getattr(current_app, "db", None)
+    if db is None:
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+
+    boards = db["boards"]
+    sticky_notes = db["sticky_notes"]
+
+    board = boards.find_one({"public_id": public_id})
+    if not board:
+        return jsonify({
+            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
+        }), 404
+
+    board_id = board["_id"]
+    data = request.get_json(silent=True) or {}
+
+    text = data.get("text") or ""
+    if len(text) > 500:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "text는 500자를 초과할 수 없습니다.", "details": {}}
+        }), 422
+
+    image_key = data.get("image_key") or ""
+    x = int(data.get("x", 0))
+    y = int(data.get("y", 0))
+
+    # 300개 제한: note_count < 300 조건부 $inc
+    result = boards.find_one_and_update(
+        {"_id": board_id, "note_count": {"$lt": 300}},
+        {"$inc": {"note_count": 1, "next_z_index": 1}},
+        return_document=ReturnDocument.AFTER,
+    )
+    if not result:
+        return jsonify({
+            "error": {"code": "NOTE_LIMIT_EXCEEDED", "message": "보드당 포스트잇 최대 300개 제한을 초과했습니다.", "details": {}}
+        }), 403
+
+    z_index = result["next_z_index"]
+
+    now = datetime.utcnow()
+    note_doc = {
+        "board_id": board_id,
+        "owner_user_id": user_id,
+        "text": text,
+        "image_key": image_key,
+        "x": x,
+        "y": y,
+        "z_index": z_index,
+        "version": 0,
+        "created_at": now,
+        "updated_at": now,
+    }
+    ins = sticky_notes.insert_one(note_doc)
+    note_doc["_id"] = ins.inserted_id
+
+    image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
+    return jsonify(_serialize_note(note_doc, image_base_url)), 201
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/boards/<public_id>/notes/<note_id> - 포스트잇 수정/이동
+# ---------------------------------------------------------------------------
+@boards_bp.route("/<public_id>/notes/<note_id>", methods=["PATCH"])
+def update_note(public_id: str, note_id: str):
+    """
+    포스트잇 수정/이동 API
+    - 인증: 필수 (보드 생성자 또는 포스트잇 작성자)
+    - 낙관적 락 (version)
+    """
+    user_id = _get_current_user_id()
+    if not user_id:
+        return jsonify({
+            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
+        }), 401
+
+    db = getattr(current_app, "db", None)
+    if db is None:
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+
+    data = request.get_json(silent=True) or {}
+    version = data.get("version")
+    if version is None:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "version이 필요합니다.", "details": {}}
+        }), 422
+
+    # NO_CHANGES: version만 있고 변경 필드 없음
+    change_keys = {"text", "image_key", "x", "y"}
+    has_change = any(k in data for k in change_keys)
+    if not has_change:
+        return jsonify({
+            "error": {"code": "NO_CHANGES", "message": "변경할 필드가 없습니다.", "details": {}}
+        }), 400
+
+    boards = db["boards"]
+    sticky_notes = db["sticky_notes"]
+
+    board = boards.find_one({"public_id": public_id})
+    if not board:
+        return jsonify({
+            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
+        }), 404
+
+    try:
+        oid = ObjectId(note_id)
+    except Exception:
+        return jsonify({
+            "error": {"code": "NOTE_NOT_FOUND", "message": "포스트잇을 찾을 수 없습니다.", "details": {}}
+        }), 404
+
+    note = sticky_notes.find_one({"_id": oid, "board_id": board["_id"]})
+    if not note:
+        return jsonify({
+            "error": {"code": "NOTE_NOT_FOUND", "message": "포스트잇을 찾을 수 없습니다.", "details": {}}
+        }), 404
+
+    is_owner = str(note["owner_user_id"]) == str(user_id)
+    is_board_owner = str(board["owner_user_id"]) == str(user_id)
+    if not is_owner and not is_board_owner:
+        return jsonify({
+            "error": {"code": "FORBIDDEN", "message": "수정 권한이 없습니다.", "details": {}}
+        }), 403
+
+    if note.get("version", 0) != version:
+        return jsonify({
+            "error": {"code": "CONFLICT", "message": "버전 충돌. 최신 데이터를 확인해주세요.", "details": {}}
+        }), 409
+
+    # update payload
+    update = {"$set": {"updated_at": datetime.utcnow(), "version": version + 1}}
+    if "text" in data:
+        if len(str(data["text"])) > 500:
+            return jsonify({
+                "error": {"code": "VALIDATION_ERROR", "message": "text는 500자를 초과할 수 없습니다.", "details": {}}
+            }), 422
+        update["$set"]["text"] = data["text"]
+    if "image_key" in data:
+        update["$set"]["image_key"] = data["image_key"] if data["image_key"] is not None else ""
+    if "x" in data:
+        update["$set"]["x"] = int(data["x"])
+    if "y" in data:
+        update["$set"]["y"] = int(data["y"])
+
+    # z_index: boards.next_z_index 사용
+    result = boards.find_one_and_update(
+        {"_id": board["_id"]},
+        {"$inc": {"next_z_index": 1}},
+        return_document=ReturnDocument.AFTER,
+    )
+    new_z = result["next_z_index"]
+    update["$set"]["z_index"] = new_z
+
+    up = sticky_notes.update_one(
+        {"_id": oid, "board_id": board["_id"], "version": version},
+        update,
+    )
+    if up.matched_count == 0:
+        return jsonify({
+            "error": {"code": "CONFLICT", "message": "버전 충돌. 최신 데이터를 확인해주세요.", "details": {}}
+        }), 409
+
+    updated = sticky_notes.find_one({"_id": oid})
+    image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
+    return jsonify(_serialize_note(updated, image_base_url)), 200
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/boards/<public_id>/notes/<note_id> - 포스트잇 삭제
+# ---------------------------------------------------------------------------
+@boards_bp.route("/<public_id>/notes/<note_id>", methods=["DELETE"])
+def delete_note(public_id: str, note_id: str):
+    """
+    포스트잇 삭제 API
+    - 인증: 필수 (보드 생성자 또는 포스트잇 작성자)
+    """
+    user_id = _get_current_user_id()
+    if not user_id:
+        return jsonify({
+            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
+        }), 401
+
+    db = getattr(current_app, "db", None)
+    if db is None:
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+
+    boards = db["boards"]
+    sticky_notes = db["sticky_notes"]
+
+    board = boards.find_one({"public_id": public_id})
+    if not board:
+        return jsonify({
+            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
+        }), 404
+
+    try:
+        oid = ObjectId(note_id)
+    except Exception:
+        return jsonify({
+            "error": {"code": "NOTE_NOT_FOUND", "message": "포스트잇을 찾을 수 없습니다.", "details": {}}
+        }), 404
+
+    note = sticky_notes.find_one({"_id": oid, "board_id": board["_id"]})
+    if not note:
+        return jsonify({
+            "error": {"code": "NOTE_NOT_FOUND", "message": "포스트잇을 찾을 수 없습니다.", "details": {}}
+        }), 404
+
+    is_owner = str(note["owner_user_id"]) == str(user_id)
+    is_board_owner = str(board["owner_user_id"]) == str(user_id)
+    if not is_owner and not is_board_owner:
+        return jsonify({
+            "error": {"code": "FORBIDDEN", "message": "삭제 권한이 없습니다.", "details": {}}
+        }), 403
+
+    sticky_notes.delete_one({"_id": oid, "board_id": board["_id"]})
+    boards.update_one({"_id": board["_id"]}, {"$inc": {"note_count": -1}})
 
     return "", 204
