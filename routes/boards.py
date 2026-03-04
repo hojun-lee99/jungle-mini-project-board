@@ -10,12 +10,12 @@
 - 포스트잇 삭제 (DELETE /api/boards/<public_id>/notes/<note_id>)
 """
 import uuid
-from datetime import datetime
 
 from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from pymongo import ReturnDocument
+from utils import utc_now
 
 boards_bp = Blueprint("boards", __name__, url_prefix="/api/boards")
 
@@ -85,7 +85,7 @@ def create_board():
     data = request.get_json(silent=True) or {}
     title = data.get("title") or ""
 
-    now = datetime.utcnow()
+    now = utc_now()
     public_id = str(uuid.uuid4())
 
     doc = {
@@ -215,7 +215,7 @@ def update_board(public_id: str):
 
     boards.update_one(
         {"_id": board["_id"]},
-        {"$set": {"public_id": new_public_id, "updated_at": datetime.utcnow()}}
+        {"$set": {"public_id": new_public_id, "updated_at": utc_now()}}
     )
 
     # TODO: board_invalidated WebSocket broadcast (기존 room)
@@ -259,7 +259,7 @@ def delete_board(public_id: str):
             "error": {"code": "FORBIDDEN", "message": "보드 생성자만 삭제할 수 있습니다.", "details": {}}
         }), 403
 
-    now = datetime.utcnow()
+    now = utc_now()
     board_id = board["_id"]
     owner_id = board["owner_user_id"]
 
@@ -343,7 +343,7 @@ def create_note(public_id: str):
 
     z_index = result["next_z_index"]
 
-    now = datetime.utcnow()
+    now = utc_now()
     note_doc = {
         "board_id": board_id,
         "owner_user_id": user_id,
@@ -434,7 +434,7 @@ def update_note(public_id: str, note_id: str):
         }), 409
 
     # update payload
-    update = {"$set": {"updated_at": datetime.utcnow(), "version": version + 1}}
+    update = {"$set": {"updated_at": utc_now(), "version": version + 1}}
     if "text" in data:
         if len(str(data["text"])) > 500:
             return jsonify({
