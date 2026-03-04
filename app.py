@@ -2,10 +2,9 @@ from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 from config import Config
 from services import register_user, login_user
-from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies 
+from flask_jwt_extended import JWTManager, create_access_token, set_access_cookies
 from datetime import timedelta
 from pymongo import MongoClient
-
 from routes.boards import boards_bp
 
 app = Flask(__name__)
@@ -15,6 +14,15 @@ app.config["JWT_SECRET_KEY"] = Config.SECRET_KEY
 app.config["JWT_TOKEN_LOCATION"] = ['cookies']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
+# !!! 로컬 db 설정에 맞춰 수정 필요
+client = MongoClient("mongodb://localhost:27017")
+db = client["mydb"]
+app.db = db  # Blueprint에서 current_app.db로 접근
+
+# Blueprint 등록
+app.register_blueprint(boards_bp)
+
+
 # !!! 로컬 db 설정에 맞춰 수정 필요
 client = MongoClient("mongodb://localhost:27017")
 db = client["mydb"]
