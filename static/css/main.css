@@ -147,6 +147,14 @@ div {
   min-width:0;
   padding:24px;
   position:relative;
+
+  display:flex;
+  flex-direction:column;
+}   
+
+.content-body{
+  flex:1;
+  overflow-y:auto;
 }
 
 .fab{
@@ -160,4 +168,41 @@ div {
   border:none;
   background-color: #05D182;
   color: #fff;
+}
+
+.board-list{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.board-item{
+  border:1px solid #cfcfcf;
+  height:54px;
+  padding:0 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#fff;
+}
+
+.board-title{
+  font-size:16px;
+}
+
+.share-btn{
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px;
+}
+
+.share-btn .material-symbols-outlined{
+  font-size:22px;
 }
