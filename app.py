@@ -21,6 +21,7 @@ CORS(app, supports_credentials=True)
 app.config["JWT_SECRET_KEY"] = Config.SECRET_KEY
 app.config["JWT_TOKEN_LOCATION"] = ['cookies']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # fetch/AJAX에서 X-CSRF-TOKEN 미전송 시 POST 401 방지
 jwt = JWTManager(app)
 # !!! 로컬 db 설정에 맞춰 수정 필요
 client = MongoClient("mongodb://localhost:27017")
