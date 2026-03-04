@@ -39,7 +39,7 @@
 
             <div class="sidebar-bottom">
                 <button class="logout">
-                    <span class="material-symbols-outlined" id="toggleIcon">
+                    <span class="material-symbols-outlined">
                         logout
                     </span>
                     <span id="logoutText">로그아웃</span>
@@ -159,6 +159,22 @@
             </div>
             <button class="fab" aria-label="보드 추가">+</button>
         </main>
+
+        <div class="modal" id="createBoardModal" aria-hidden="true">
+            <div class="modal-backdrop" data-close="true"></div>
+
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="createBoardTitle">
+                <button class="modal-close" type="button" id="modalCloseBtn" aria-label="닫기">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+
+                <h2 class="modal-title" id="createBoardTitle">보드 이름을 입력하세요.</h2>
+
+                <input class="modal-input" id="boardNameInput" type="text" placeholder="" />
+
+                <button class="modal-submit" id="createBoardBtn" type="button">보드 만들기</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -177,6 +193,36 @@
             myArchiveText.textContent = collapsed ? "" : "내 보드 기록";
             publicArchiveText.textContent = collapsed ? "" : "공개된 보드 기록";
             logoutText.textContent = collapsed ? "" : "로그아웃";
+        });
+
+        const modal = document.getElementById("createBoardModal");
+        const fab = document.querySelector(".fab");
+        const modalCloseBtn = document.getElementById("modalCloseBtn");
+        const boardNameInput = document.getElementById("boardNameInput");
+
+        function openModal() {
+            modal.classList.add("is-open");
+            modal.setAttribute("aria-hidden", "false");
+            boardNameInput.value = "";
+            boardNameInput.focus();
+        }
+
+        function closeModal() {
+            modal.classList.remove("is-open");
+            modal.setAttribute("aria-hidden", "true");
+        }
+
+        fab.addEventListener("click", openModal);
+        modalCloseBtn.addEventListener("click", closeModal);
+
+        // 바깥(오버레이) 클릭 시 닫기
+        modal.addEventListener("click", (e) => {
+            if (e.target.dataset.close === "true") closeModal();
+        });
+
+        // ESC로 닫기
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && modal.classList.contains("is-open")) closeModal();
         });
     </script>
 
