@@ -8,7 +8,7 @@ from pymongo import MongoClient
 from routes.boards import boards_bp
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 
 app.config["JWT_SECRET_KEY"] = Config.SECRET_KEY
 app.config["JWT_TOKEN_LOCATION"] = ['cookies']
@@ -23,18 +23,9 @@ app.db = db  # Blueprint에서 current_app.db로 접근
 app.register_blueprint(boards_bp)
 
 
-# !!! 로컬 db 설정에 맞춰 수정 필요
-client = MongoClient("mongodb://localhost:27017")
-db = client["mydb"]
-app.db = db  # Blueprint에서 current_app.db로 접근
-
-# Blueprint 등록
-app.register_blueprint(boards_bp)
-
-
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('login.html')
 
 # 일단은 access token만 httponly로 발급 시간이 된다면 refresh token도 발급
 @app.route('/api/auth/login', methods=['POST'])
