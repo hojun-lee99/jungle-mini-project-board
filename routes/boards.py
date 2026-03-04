@@ -14,18 +14,15 @@ from datetime import datetime
 
 from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from pymongo import ReturnDocument
 
 boards_bp = Blueprint("boards", __name__, url_prefix="/api/boards")
 
 
 def _get_current_user_id():
-    """
-    현재 로그인 사용자 ID 반환.
-    TODO: JWT/세션 연동 후 실제 인증으로 교체.
-    개발용: X-User-Id 헤더 사용.
-    """
-    return request.headers.get("X-User-Id")
+    """JWT 쿠키에서 현재 로그인 사용자 ID 반환."""
+    return get_jwt_identity()
 
 
 def _serialize_board(doc, include_created_at=False):
@@ -69,6 +66,7 @@ def _serialize_note(doc, image_base_url=None):
 # POST /api/boards - 보드 생성
 # ---------------------------------------------------------------------------
 @boards_bp.route("", methods=["POST"])
+@jwt_required(optional=True)
 def create_board():
     """
     보드 생성 API
@@ -111,6 +109,7 @@ def create_board():
 # GET /api/boards - 내 보드 목록
 # ---------------------------------------------------------------------------
 @boards_bp.route("", methods=["GET"])
+@jwt_required(optional=True)
 def list_boards():
     """
     내 보드 목록 조회 API
@@ -179,6 +178,7 @@ def get_board(public_id: str):
 # PATCH /api/boards/<public_id> - public_id 변경
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>", methods=["PATCH"])
+@jwt_required(optional=True)
 def update_board(public_id: str):
     """
     보드 public_id 변경 API
@@ -227,6 +227,7 @@ def update_board(public_id: str):
 # DELETE /api/boards/<public_id> - 보드 삭제
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>", methods=["DELETE"])
+@jwt_required(optional=True)
 def delete_board(public_id: str):
     """
     보드 삭제 API
@@ -290,6 +291,7 @@ def delete_board(public_id: str):
 # POST /api/boards/<public_id>/notes - 포스트잇 생성
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>/notes", methods=["POST"])
+@jwt_required(optional=True)
 def create_note(public_id: str):
     """
     포스트잇 생성 API
@@ -365,6 +367,7 @@ def create_note(public_id: str):
 # PATCH /api/boards/<public_id>/notes/<note_id> - 포스트잇 수정/이동
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>/notes/<note_id>", methods=["PATCH"])
+@jwt_required(optional=True)
 def update_note(public_id: str, note_id: str):
     """
     포스트잇 수정/이동 API
@@ -472,6 +475,7 @@ def update_note(public_id: str, note_id: str):
 # DELETE /api/boards/<public_id>/notes/<note_id> - 포스트잇 삭제
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>/notes/<note_id>", methods=["DELETE"])
+@jwt_required(optional=True)
 def delete_note(public_id: str, note_id: str):
     """
     포스트잇 삭제 API
