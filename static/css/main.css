@@ -206,3 +206,78 @@ div {
 .share-btn .material-symbols-outlined{
   font-size:22px;
 }
+
+.modal{
+  position:fixed;
+  inset:0;
+  display:none; 
+  z-index:9999;
+}
+
+.modal.is-open{
+  display:block;
+}
+
+.modal-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.25);
+}
+
+.modal-panel{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%, -50%);
+  width:min(680px, calc(100vw - 48px));
+  height:min(420px, calc(100vh - 48px));
+  background:#fff;
+  border:1px solid #cfcfcf;
+  border-radius:18px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:26px;
+}
+
+.modal-close{
+  position:absolute;
+  right:18px;
+  top:18px;
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  border:none;
+  background:#DC3545;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.modal-title{
+  font-size:24px;
+  margin:0;
+}
+
+.modal-input{
+  width:min(420px, 80%);
+  height:46px;
+  border:1px solid #bdbdbd;
+  border-radius:8px;
+  padding:0 14px;
+  outline:none;
+}
+
+.modal-submit{
+  width:min(260px, 70%);
+  height:46px;
+  border:none;
+  border-radius:8px;
+  background:#05D182;
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+}
