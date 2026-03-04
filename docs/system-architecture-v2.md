@@ -129,12 +129,16 @@ broadcast는 해당 room으로만 수행한다.
   _id: ObjectId,
   owner_user_id: UUID,
   public_id: UUID,
+  title: string,
   next_z_index: int,
   note_count: int,
   created_at: datetime,
   updated_at: datetime
 }
 ```
+
+title:
+- 보드 제목. 선택적, 기본값 "" 또는 null.
 
 next_z_index:
 - z_index 원자적 증가용 카운터
