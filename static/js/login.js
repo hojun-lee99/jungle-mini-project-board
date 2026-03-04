@@ -16,8 +16,7 @@ $(document).ready(function () {
       data: JSON.stringify({ username: username, password: password }),
       xhrFields: { withCredentials: true },
       success: function (data) {
-        // 로그인 성공 시 메인(보드 목록) 페이지로 이동
-        // TODO: 메인 페이지 구현 후 경로 수정
+        // 로그인 성공 시 메인(내 칠판 목록) 페이지로 리다이렉트
         window.location.href = "/";
       },
       error: function (xhr) {
