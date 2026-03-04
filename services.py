@@ -2,12 +2,32 @@
 from pymongo import MongoClient
 from config import Config
 import uuid
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 #!!! 
 # 로컬 db 설정에 맞춰 수정 필요
 client = MongoClient(Config.MONGO_URI)
 db = client['jungle_db']
+
+# 401 아이디 비밀번호 불일치
+def login_user(data):
+  username = data.get('username')
+  password = data.get('password')
+
+  if not username or not password:
+    return {"error": "username과 password는 필수 입력값입니다."}, 422
+  
+  user = db.users.find_one({"username": username})
+
+  if not user or not check_password_hash(user['password'], password):
+    return {"error": "아이디 또는 비밀번호가 일치하지 않습니다."}, 401
+  
+  return {
+    "user_id": user["user_id"],
+    "username": user["username"]
+  }, 200
+
+
 
 def register_user(data):
   username = data.get('username')
