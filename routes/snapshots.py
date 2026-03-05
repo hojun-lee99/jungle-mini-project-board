@@ -126,22 +126,22 @@ def upload_snapshot():
 # *** Todo: 이하 내용은 스냅샷 게시판에 필요한 api 초안입니다. 필요시 수정해서 사용하세요. ***
 
 # ---------------------------------------------------------------------------
-# GET /api/snapshots/mine - 내 스냅샷 목록
+# get_mine_snapshots - 내 스냅샷 조회 (API·SSR 공용)
 # ---------------------------------------------------------------------------
-@snapshots_bp.route("/mine", methods=["GET"])
-@jwt_required()
-def list_mine():
-    """나에게 귀속된 보드 스냅샷 목록."""
-    user_id = _get_current_user_id()
+def get_mine_snapshots(user_id, page=1, limit=20):
+    """
+    내 스냅샷 목록 조회. (list_mine API·snapshot SSR 공용)
+    Returns: (items: list[dict], total: int)
+    """
     if not user_id:
-        return jsonify({"error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}}), 401
+        return [], 0
 
     db = getattr(current_app, "db", None)
     if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+        return [], 0
 
-    page = max(1, int(request.args.get("page", 1)))
-    limit = min(100, max(1, int(request.args.get("limit", 20))))
+    page = max(1, int(page))
+    limit = min(100, max(1, int(limit)))
     skip = (page - 1) * limit
 
     snapshots = db["snapshots"]
@@ -152,27 +152,46 @@ def list_mine():
     def _serialize(doc):
         return {
             "id": str(doc["_id"]),
-            "title": doc.get("title", ""),  
+            "title": doc.get("title", ""),
             "image_url": f"/api/snapshots/{doc['_id']}/image",
             "is_public": doc.get("is_public", False),
             "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
         }
 
-    return jsonify({"snapshots": [_serialize(d) for d in items], "total": total}), 200
+    return [_serialize(d) for d in items], total
 
 
 # ---------------------------------------------------------------------------
-# GET /api/snapshots/public - 공개 스냅샷 목록
+# GET /api/snapshots/mine - 내 스냅샷 목록
 # ---------------------------------------------------------------------------
-@snapshots_bp.route("/public", methods=["GET"])
-def list_public():
-    """모든 사용자가 공개한 스냅샷 목록."""
-    db = getattr(current_app, "db", None)
-    if db is None:
-        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+@snapshots_bp.route("/mine", methods=["GET"])
+@jwt_required()
+def list_mine():
+    """나에게 귀속된 보드 스냅샷 목록."""
+    user_id = _get_current_user_id()
+    if not user_id:
+        return jsonify({"error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}}), 401
 
     page = max(1, int(request.args.get("page", 1)))
     limit = min(100, max(1, int(request.args.get("limit", 20))))
+    items, total = get_mine_snapshots(user_id=user_id, page=page, limit=limit)
+    return jsonify({"snapshots": items, "total": total}), 200
+
+
+# ---------------------------------------------------------------------------
+# get_public_snapshots - 공개 스냅샷 조회 (API·SSR 공용)
+# ---------------------------------------------------------------------------
+def get_public_snapshots(page=1, limit=20):
+    """
+    공개된 스냅샷 목록 조회. (list_public API·publicList SSR 공용)
+    Returns: (items: list[dict], total: int)
+    """
+    db = getattr(current_app, "db", None)
+    if db is None:
+        return [], 0
+
+    page = max(1, int(page))
+    limit = min(100, max(1, int(limit)))
     skip = (page - 1) * limit
 
     snapshots = db["snapshots"]
@@ -188,15 +207,33 @@ def list_public():
             user_map[str(u["user_id"])] = u.get("username", "")
 
     def _serialize(doc):
+        created = doc.get("created_at")
+        date_str = f"{created.year}. {created.month}. {created.day}." if created else ""
+        owner = user_map.get(str(doc["board_owner_id"]), "")
+        parts = [p for p in [owner, date_str] if p]
+        label = " · ".join(parts) if parts else "공개 보드"
         return {
             "id": str(doc["_id"]),
-            "title": doc.get("title", ""),  
+            "title": doc.get("title", ""),
             "image_url": f"/api/snapshots/{doc['_id']}/image",
-            "owner_username": user_map.get(str(doc["board_owner_id"]), ""),
-            "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
+            "owner_username": owner,
+            "created_at": created.isoformat() if created else None,
+            "label": label,
         }
 
-    return jsonify({"snapshots": [_serialize(d) for d in items], "total": total}), 200
+    return [_serialize(d) for d in items], total
+
+
+# ---------------------------------------------------------------------------
+# GET /api/snapshots/public - 공개 스냅샷 목록
+# ---------------------------------------------------------------------------
+@snapshots_bp.route("/public", methods=["GET"])
+def list_public():
+    """모든 사용자가 공개한 스냅샷 목록."""
+    page = max(1, int(request.args.get("page", 1)))
+    limit = min(100, max(1, int(request.args.get("limit", 20))))
+    items, total = get_public_snapshots(page=page, limit=limit)
+    return jsonify({"snapshots": items, "total": total}), 200
 
 
 # ---------------------------------------------------------------------------

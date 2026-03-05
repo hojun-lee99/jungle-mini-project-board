@@ -14,7 +14,7 @@ from flask_jwt_extended import (
 from datetime import timedelta
 from pymongo import MongoClient
 from routes.boards import boards_bp
-from routes.snapshots import snapshots_bp
+from routes.snapshots import snapshots_bp, get_public_snapshots, get_mine_snapshots
 from extensions import socketio
 import sockets
 
@@ -66,13 +66,22 @@ def main():
 
 @app.route('/snapshot')
 def snapshot():
-    """내 보드 기록(스냅샷) 페이지."""
-    return render_template('snapshot.html')
+    """내 보드 기록(스냅샷) 페이지 (SSR)."""
+    try:
+        verify_jwt_in_request(optional=True)
+    except Exception:
+        pass
+    user_id = get_jwt_identity()
+    if not user_id:
+        return redirect('/')
+    snapshots, _ = get_mine_snapshots(user_id=user_id, page=1, limit=100)
+    return render_template('snapshot.html', snapshots=snapshots)
 
 @app.route('/publicList')
 def publicList():
-    """공개된 보드 기록 페이지."""
-    return render_template('publicList.html')
+    """공개된 보드 기록 페이지 (SSR)."""
+    snapshots, _ = get_public_snapshots(page=1, limit=100)
+    return render_template('publicList.html', snapshots=snapshots)
 
 @app.route('/boards/<public_id>')
 def board_page(public_id: str):
