@@ -33,7 +33,34 @@ $(document).ready(function() {
             success: function(response) {
                 alert("회원가입이 완료되었습니다!");
                 
-            }
+                 // 로그인 성공 시 메인(내 칠판 목록) 페이지로 리다이렉트
+                window.location.href = "/login";
+            },
+            error:function(xhr) 
+            {
+                // console.log(xhr)
+                //alert(xhr.status);
+                //alert(thrownError);
+                // console.error("Response JSON:", xhr.responseJSON);
+
+                if (xhr.status === 400) {
+
+                    showError("이미 존재하는 이름입니다.");
+                }
+                else if(xhr.status === 422) {
+                
+                    //showError(xhr.responseJSON.error)
+                    showError("유효성 검사 실패");
+
+                    if(username.length < 2 || username.length > 7) {
+                        showError("이름은 2자 이상, 7자 이하로 입력해주세요.");
+                    }
+                    else if (password.length < 8) {
+                        message = "비밀번호는 적어도 8자리보다 길어야 합니다.";
+                    }
+                }
+
+            },
         });
     });
 
