@@ -25,11 +25,11 @@ app.config["JWT_SECRET_KEY"] = Config.SECRET_KEY
 app.config["JWT_TOKEN_LOCATION"] = ['cookies']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # fetch/AJAX에서 X-CSRF-TOKEN 미전송 시 POST 401 방지
-app.config["IMAGE_BASE_URL"] = Config.IMAGE_BASE_URL
+
 jwt = JWTManager(app)
 # !!! 로컬 db 설정에 맞춰 수정 필요
-client = MongoClient("mongodb://localhost:27017")
-db = client["mydb"]
+client = MongoClient(Config.MONGO_URI)
+db = client["jungle_db"]
 app.db = db  # Blueprint에서 current_app.db로 접근
 
 socketio.init_app(app)

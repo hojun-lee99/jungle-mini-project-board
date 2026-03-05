@@ -9,9 +9,12 @@
 import os
 import uuid
 
+import boto3
+
 from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from botocore.exceptions import ClientError
 
 from utils import utc_now
 
@@ -87,15 +90,37 @@ def upload_snapshot():
         }), 400
 
     owner_id = str(board["owner_user_id"])
-    base_dir = current_app.static_folder or "static"
-    upload_dir = os.path.join(base_dir, "uploads", "snapshots", owner_id)
-    os.makedirs(upload_dir, exist_ok=True)
     filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(upload_dir, filename)
-    file.save(filepath)
+    # app.config 우선. ''로 명시하면 S3 미사용 (테스트 시 로컬 저장)
+    bucket = current_app.config.get("S3_BUCKET_NAME")
+    if bucket is None:
+        bucket = os.environ.get("S3_BUCKET_NAME") or ""
 
-    # image_key: uploads/snapshots/{owner_id}/{filename}
-    image_key = f"uploads/snapshots/{owner_id}/{filename}"
+    if bucket:
+        # S3 업로드
+        region = current_app.config.get("AWS_REGION", "ap-northeast-2")
+        s3 = boto3.client("s3", region_name=region)
+        key = f"snapshots/{owner_id}/{filename}"
+        try:
+            file.seek(0)
+            s3.upload_fileobj(
+                file, bucket, key, ExtraArgs={"ContentType": EXT_TO_MIME.get(ext, "image/png")}
+            )
+        except ClientError as e:
+            current_app.logger.exception("S3 upload failed: %s", e)
+            return jsonify({
+                "error": {"code": "INTERNAL_ERROR", "message": "스냅샷 업로드에 실패했습니다.", "details": {}}
+            }), 500
+        image_key = key
+    else:
+        # 로컬 저장 (fallback)
+        base_dir = current_app.static_folder or "static"
+        upload_dir = os.path.join(base_dir, "uploads", "snapshots", owner_id)
+        os.makedirs(upload_dir, exist_ok=True)
+        filepath = os.path.join(upload_dir, filename)
+        file.save(filepath)
+        image_key = f"uploads/snapshots/{owner_id}/{filename}"
+
     return jsonify({"image_key": image_key}), 201
 
 # *** Todo: 이하 내용은 스냅샷 게시판에 필요한 api 초안입니다. 필요시 수정해서 사용하세요. ***
@@ -212,13 +237,35 @@ def get_snapshot_image(snapshot_id: str):
             "error": {"code": "IMAGE_NOT_FOUND", "message": "이미지가 없습니다.", "details": {}}
         }), 404
 
+    # app.config 우선. ''로 명시하면 S3 미사용 (테스트 시 로컬 저장)
+    bucket = current_app.config.get("S3_BUCKET_NAME")
+    if bucket is None:
+        bucket = os.environ.get("S3_BUCKET_NAME") or ""
+
+    if bucket and not image_key.startswith("uploads/"):
+        # S3에서 스트리밍
+        region = current_app.config.get("AWS_REGION", "ap-northeast-2")
+        s3 = boto3.client("s3", region_name=region)
+        try:
+            obj = s3.get_object(Bucket=bucket, Key=image_key)
+            body = obj["Body"].read()
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                return jsonify({
+                    "error": {"code": "IMAGE_NOT_FOUND", "message": "이미지 파일을 찾을 수 없습니다.", "details": {}}
+                }), 404
+            raise
+        ext = os.path.splitext(image_key)[1].lower()
+        mimetype = EXT_TO_MIME.get(ext, "application/octet-stream")
+        return current_app.response_class(body, mimetype=mimetype)
+
+    # 로컬 파일
     base_dir = current_app.static_folder or "static"
     filepath = os.path.join(base_dir, image_key)
     if not os.path.isfile(filepath):
         return jsonify({
             "error": {"code": "IMAGE_NOT_FOUND", "message": "이미지 파일을 찾을 수 없습니다.", "details": {}}
         }), 404
-
     ext = os.path.splitext(image_key)[1].lower()
     mimetype = EXT_TO_MIME.get(ext, "application/octet-stream")
     return send_file(filepath, mimetype=mimetype)

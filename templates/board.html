@@ -6,447 +6,10 @@
     <title>크래프톤 정글 - 보드</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
-    <style>
-      .bg-logo {
-        position: relative;
-      }
-      .bg-logo::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background-image: url('{{ url_for("static", filename="icons/Jungle_by KRAFTON_Logo_G.png") }}');
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: 300px;
-        opacity: 0.5;
-        pointer-events: none;
-        z-index: 0;
-      }
-      .note {
-        position: absolute;
-        width: fit-content;
-        max-width: 320px;
-        background: transparent;
-        pointer-events: auto;
-        z-index: 1;
-        user-select: none;
-        -webkit-user-select: none;
-        box-shadow: none;
-        border-radius: 4px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-      }
-      .note-drag-handle {
-        height: 20px;
-        cursor: move;
-        flex-shrink: 0;
-      }
-      .note-drag-handle::before {
-        content: '⋮⋮';
-        font-size: 12px;
-        color: rgba(0, 0, 0, 0.3);
-        padding-left: 4px;
-      }
-      .note-body {
-        padding: 4px 12px 8px;
-        overflow: visible;
-        cursor: move;
-      }
-      .note-text {
-        white-space: pre-wrap;
-        word-break: break-word;
-        user-select: text;
-        -webkit-user-select: text;
-        cursor: text;
-      }
-      .note-body img {
-        max-width: 100%;
-        max-height: 160px;
-        object-fit: contain;
-      }
-      .note.is-highlighted {
-        background: rgba(254, 240, 138, 0.6);
-        box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.8);
-      }
-      .wingbar-note-item.is-active {
-        background: #e5e7eb;
-      }
-      .header-pointer-through {
-        pointer-events: none;
-      }
-      .header-pointer-through .header-clickable {
-        pointer-events: auto;
-      }
-      .select-none {
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      .wingbar-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.3);
-        z-index: 200;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transition:
-          opacity 0.2s,
-          visibility 0.2s;
-      }
-      .wingbar-backdrop.is-open {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-      }
-      .wingbar {
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        width: 280px;
-        max-width: 90vw;
-        background: white;
-        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-        z-index: 201;
-        transform: translateX(100%);
-        transition: transform 0.25s ease-out;
-        display: flex;
-        flex-direction: column;
-      }
-      .wingbar.is-open {
-        transform: translateX(0);
-      }
-      .wingbar-header {
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 20px 24px;
-        border-bottom: 1px solid #e5e7eb;
-      }
-      .wingbar-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #111827;
-      }
-      .wingbar-close {
-        width: 32px;
-        height: 32px;
-        border: none;
-        background: transparent;
-        font-size: 24px;
-        line-height: 1;
-        color: #6b7280;
-        cursor: pointer;
-        border-radius: 6px;
-        transition:
-          background 0.2s,
-          color 0.2s;
-      }
-      .wingbar-close:hover {
-        background: #f3f4f6;
-        color: #111827;
-      }
-      .wingbar-body {
-        padding: 16px;
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-      }
-      .wingbar-item {
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 16px;
-        color: #374151;
-        font-size: 15px;
-        text-decoration: none;
-        border-radius: 8px;
-        transition:
-          background 0.2s,
-          color 0.2s;
-      }
-      .wingbar-item:hover {
-        background: #f3f4f6;
-      }
-      .wingbar-item-btn {
-        width: 100%;
-        text-align: left;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        font: inherit;
-      }
-      .wingbar-item-icon {
-        font-size: 18px;
-        opacity: 0.8;
-      }
-      .wingbar-section {
-        margin-top: 20px;
-        padding-top: 16px;
-        border-top: 1px solid #e5e7eb;
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-      }
-      .wingbar-section-title {
-        flex-shrink: 0;
-        margin: 0 0 12px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      .wingbar-note-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        flex: 1;
-        min-height: calc(100vh - 130px);
-        overflow-y: auto;
-      }
-      .wingbar-note-item {
-        padding: 10px 12px;
-        margin-bottom: 4px;
-        font-size: 13px;
-        color: #374151;
-        background: #f9fafb;
-        border-radius: 6px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .wingbar-note-item:last-child {
-        margin-bottom: 0;
-      }
-      .wingbar-empty {
-        margin: 0;
-        font-size: 13px;
-        color: #9ca3af;
-      }
-      /* 이미지 모달 */
-      .image-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 300;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transition:
-          opacity 0.2s,
-          visibility 0.2s;
-      }
-      .image-modal.is-open {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-      }
-      .image-modal-backdrop {
-        position: absolute;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.4);
-      }
-      .image-modal-panel {
-        position: relative;
-        width: 90%;
-        max-width: 400px;
-        padding: 24px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      }
-      .image-modal-title {
-        margin: 0 0 16px;
-        font-size: 18px;
-        font-weight: 600;
-        color: #111827;
-      }
-      .image-modal-input {
-        display: block;
-        width: 100%;
-        margin-bottom: 20px;
-        padding: 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-      }
-      .image-modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-      }
-      .image-modal-btn {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-      }
-      .image-modal-btn-secondary {
-        background: #f3f4f6;
-        color: #374151;
-      }
-      .image-modal-btn-primary {
-        background: #05d182;
-        color: white;
-      }
-      #btn-add-image.image-mode-active {
-        outline: 2px solid #05d182;
-        outline-offset: 2px;
-      }
-      /* 새 포스트잇 모달 */
-      .note-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 300;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transition:
-          opacity 0.2s,
-          visibility 0.2s;
-      }
-      .note-modal.is-open {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-      }
-      .note-modal-backdrop {
-        position: absolute;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.4);
-      }
-      .note-modal-panel {
-        position: relative;
-        width: 90%;
-        max-width: 420px;
-        padding: 24px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      }
-      .note-modal-title {
-        margin: 0 0 8px;
-        font-size: 18px;
-        font-weight: 600;
-        color: #111827;
-      }
-      .note-modal-hint {
-        margin: 0 0 16px;
-        font-size: 13px;
-        color: #6b7280;
-      }
-      .note-modal-textarea {
-        display: block;
-        width: 100%;
-        margin-bottom: 20px;
-        padding: 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 14px;
-        resize: vertical;
-        outline: none;
-      }
-      .note-modal-textarea:focus {
-        border-color: #05d182;
-        box-shadow: 0 0 0 2px rgba(5, 209, 130, 0.2);
-      }
-      .note-modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-      }
-      .note-modal-btn {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-      }
-      .note-modal-btn-secondary {
-        background: #f3f4f6;
-        color: #374151;
-      }
-      .note-modal-btn-primary {
-        background: #05d182;
-        color: white;
-      }
-      /* 포스트잇 상세 모달 (요구사항 4.4) */
-      .note-detail-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 350;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transition:
-          opacity 0.2s,
-          visibility 0.2s;
-      }
-      .note-detail-modal.is-open {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-      }
-      .note-detail-backdrop {
-        position: absolute;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-      }
-      .note-detail-panel {
-        position: relative;
-        width: 90%;
-        max-width: 600px;
-        max-height: 90vh;
-        padding: 24px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        overflow-y: auto;
-      }
-      .note-detail-text {
-        margin: 0 0 16px;
-        font-size: 15px;
-        line-height: 1.6;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      .note-detail-image {
-        max-width: 90vw;
-        max-height: 80vh;
-        display: block;
-        margin: 0 auto 16px;
-      }
-      .note-detail-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 16px;
-      }
-      .note-detail-edit-textarea {
-        width: 100%;
-        min-height: 120px;
-        padding: 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 14px;
-        margin-bottom: 16px;
-      }
-    </style>
+    
+    <!-- 손글씨 폰트 추가해서 css분리 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/board.css') }}">
+    
     <link
       href="{{ url_for('static', filename='css/output.css') }}"
       rel="stylesheet"
@@ -454,21 +17,18 @@
   </head>
   <body class="bg-white w-full h-screen overflow-auto relative">
     <header
-      class="flex justify-between items-center p-6 md:px-10 md:py-8 fixed top-0 w-full z-50 header-pointer-through"
+      class="flex flex-wrap justify-between items-center gap-y-3 p-6 md:px-10 md:py-8 fixed top-0 w-full z-50 header-pointer-through bg-gray-50 border-b border-gray-100"
     >
       <h1
-        class="text-3xl md:text-4xl font-bold text-gray-500 tracking-wide cursor-pointer hover:text-gray-700 transition header-clickable"
+        class="text-3xl md:text-4xl font-bold text-gray-500 tracking-wide cursor-pointer hover:text-gray-700 transition header-clickable shrink-0"
         id="board-title"
       >
         보드 제목
       </h1>
 
-      <div class="flex items-center space-x-4 md:space-x-6 header-clickable">
-        <a href="#" id="btn-login" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition shadow-sm no-underline" style="display:none; background-color:#05D182; color:white; text-decoration:none;" title="로그인">로그인</a>
-        <button id="btn-add-note" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium transition shadow-sm" title="새 포스트잇">
-          <span>+</span>
-          <span class="hidden sm:inline">새 포스트잇</span>
-        </button>
+      <div class="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 header-clickable shrink-0">
+        <a href="#" id="btn-login" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition shadow-sm no-underline shrink-0 order-first" style="display:none; background-color:#05D182; color:white; text-decoration:none;" title="로그인">로그인</a>
+        <button id="btn-add-note" class="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium transition shadow-sm shrink-0" title="새 포스트잇">+</button>
         <button id="btn-share" class="hover:scale-110 transition transform">
           <img
             src="{{ url_for('static', filename='icons/share.svg') }}"
@@ -486,6 +46,7 @@
             src="{{ url_for('static', filename='icons/image.svg') }}"
             alt="이미지 추가"
             class="w-9 h-9"
+            style="filter: invert(52%) sepia(82%) saturate(1964%) hue-rotate(124deg) brightness(96%) contrast(97%);"
           />
         </button>
 
@@ -494,15 +55,15 @@
             src="{{ url_for('static', filename='icons/menu.svg') }}"
             alt="메뉴"
             class="w-10 h-10"
+            style="filter: invert(52%) sepia(82%) saturate(1964%) hue-rotate(124deg) brightness(96%) contrast(97%);"
           />
         </button>
       </div>
     </header>
 
-    <!-- 보드를 전체 뷰포트에 고정해 헤더 영역과 동일하게 클릭을 받도록 함 -->
     <main
       id="board-container"
-      class="fixed inset-0 min-w-full min-h-full bg-logo z-10 pt-24"
+      class="fixed inset-0 min-w-full min-h-full bg-logo z-10 pt-28 md:pt-24"
       style="overflow: auto"
       data-public-id="{{ public_id }}"
     >
@@ -585,7 +146,8 @@
       <div class="note-modal-panel">
         <h3 class="note-modal-title">새 포스트잇</h3>
         <p class="note-modal-hint">내용을 입력하고 추가를 누르면 마우스 커서 위치에 포스트잇이 생성됩니다.</p>
-        <textarea id="note-modal-text" class="note-modal-textarea" placeholder="메모 내용을 입력하세요..." rows="4"></textarea>
+        <textarea id="note-modal-text" class="note-modal-textarea" placeholder="메모 내용을 입력하세요 (최대 500자)" rows="4" maxlength="500" data-max="500"></textarea>
+        <span id="note-modal-char-count" class="note-char-counter">0/500</span>
         <div class="note-modal-actions">
           <button
             type="button"
@@ -647,8 +209,11 @@
           <textarea
             id="note-detail-edit-textarea"
             class="note-detail-edit-textarea"
-            placeholder="메모 내용"
+            placeholder="메모 내용 (최대 500자)"
+            maxlength="500"
+            data-max="500"
           ></textarea>
+          <span id="note-detail-char-count" class="note-char-counter">0/500</span>
           <div class="note-detail-actions">
             <button
               type="button"

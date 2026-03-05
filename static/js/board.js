@@ -51,10 +51,43 @@ $(document).ready(function () {
         if (noteObj) {
           noteObj.x = data.x;
           noteObj.y = data.y;
+
+          if (data.version !== undefined) {
+            noteObj.version = data.version;
+          }
         }
       }
     }
   });
+
+  socket.on('note_created', function (data) {
+    if (data && data.note) {
+      const exists = notes.find((n) => String(n.id) === String(data.note.id));
+
+      if (!exists) {
+        notes.push(data.note);
+        renderNotes();
+      }
+    }
+  })
+
+  socket.on('note_deleted', function (data) {
+    if (data && data.note_id) {
+      notes = notes.filter((n) => String(n.id) !== String(data.note_id))
+      renderNotes();
+    }
+  })
+
+  socket.on('note_updated', function (data) {
+    if (data && data.note) {
+      const idx = notes.findIndex((n) => String(n.id) === String(data.note.id));
+
+      if (idx !== -1) {
+        notes[idx] = data.note;
+        renderNotes();
+      }
+    }
+  })
 
   function loadBoard() {
     fetch(`/api/boards/${publicId}`, { credentials: 'include' })
@@ -292,6 +325,7 @@ $(document).ready(function () {
             note_id: noteId,
             x: x,
             y: y,
+            version: updated.version
           });
         }
       })
@@ -365,6 +399,11 @@ $(document).ready(function () {
           notes.push(note);
           renderNotes();
           renderWingbarMyNotes();
+
+          socket.emit('create_note', {
+            public_id: publicId,
+            note: note,
+          })
         }
       })
       .catch((err) => alert(err.message));
@@ -394,6 +433,10 @@ $(document).ready(function () {
       $(this).removeClass('image-mode-active');
       closeImageModal();
     } else {
+      if (!currentUserId) {
+        showLoginRequiredModal();
+        return;
+      }
       openImageGuideModal();
     }
   });
@@ -499,10 +542,18 @@ $(document).ready(function () {
     pendingNotePosition = null;
   }
 
+  const NOTE_TEXT_MAX = 500;
+  function updateCharCount($textarea, $counter) {
+    const len = ($textarea.val() || '').length;
+    $counter.text(len + '/' + NOTE_TEXT_MAX);
+    $counter.toggleClass('at-limit', len >= NOTE_TEXT_MAX);
+  }
+
   function openNoteModal(atPosition) {
     pendingNotePosition = atPosition; // {x,y} 또는 null
     $('#note-modal').addClass('is-open').attr('aria-hidden', 'false');
     $('#note-modal-text').val('').focus();
+    updateCharCount($('#note-modal-text'), $('#note-modal-char-count'));
   }
 
   $(document).on('mousemove', function (e) {
@@ -510,6 +561,10 @@ $(document).ready(function () {
   });
 
   $('#btn-add-note').on('click', function () {
+    if (!currentUserId) {
+      showLoginRequiredModal();
+      return;
+    }
     openNoteModal(null);
   });
   $(document).on(
@@ -518,6 +573,9 @@ $(document).ready(function () {
     closeNoteModal,
   );
   $('#note-modal-cancel').on('click', closeNoteModal);
+  $('#note-modal-text').on('input', function () {
+    updateCharCount($(this), $('#note-modal-char-count'));
+  });
 
   $(document).on('click', '#note-modal-confirm', function (e) {
     const text = String($('#note-modal-text').val() || '').trim() || '새 메모';
@@ -563,7 +621,11 @@ $(document).ready(function () {
   let lastBoardMousedown = { t: 0, x: 0, y: 0 };
 
   function tryOpenNoteModalAt(clientX, clientY) {
-    if (imageInsertMode) return;
+    if (!currentUserId) {
+      showLoginRequiredModal();
+      return false;
+    }
+    if (imageInsertMode) return false;
     const rect = $container[0].getBoundingClientRect();
     if (
       clientX < rect.left ||
@@ -719,6 +781,7 @@ $(document).ready(function () {
     const note = notes.find((n) => n.id === detailModalNoteId);
     if (!note) return;
     $('#note-detail-edit-textarea').val(note.text || '');
+    updateCharCount($('#note-detail-edit-textarea'), $('#note-detail-char-count'));
     $('#note-detail-view').hide();
     $('#note-detail-edit-view').show();
   });
@@ -726,6 +789,9 @@ $(document).ready(function () {
   $('#note-detail-cancel-edit').on('click', function () {
     $('#note-detail-edit-view').hide();
     $('#note-detail-view').show();
+  });
+  $('#note-detail-edit-textarea').on('input', function () {
+    updateCharCount($(this), $('#note-detail-char-count'));
   });
 
   $('#note-detail-save').on('click', function () {
@@ -753,7 +819,11 @@ $(document).ready(function () {
           closeNoteDetailModal();
           return null;
         }
-        if (!res.ok) return null;
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data?.error?.message || '저장에 실패했습니다.');
+          return null;
+        }
         return res.json();
       })
       .then((updated) => {
@@ -763,6 +833,11 @@ $(document).ready(function () {
           renderNotes();
           renderWingbarMyNotes();
           closeNoteDetailModal();
+
+          socket.emit('update_note', {
+            public_id: publicId,
+            note: updated
+          })
         }
       })
       .catch(() => {});
@@ -794,6 +869,11 @@ $(document).ready(function () {
           renderNotes();
           renderWingbarMyNotes();
           closeNoteDetailModal();
+
+          socket.emit('delete_note', {
+            public_id: publicId,
+            note_id: noteId,
+          })
         }
       })
       .catch(() => {});
