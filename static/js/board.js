@@ -5,6 +5,7 @@ $(document).ready(function () {
     console.error('public_id가 없습니다.');
     return;
   }
+  $('#login-required-goto').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
 
   let board = null;
   let notes = [];
@@ -155,7 +156,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (res.status === 403 || res.status === 409) {
@@ -229,7 +230,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (!res.ok) {
@@ -296,6 +297,16 @@ $(document).ready(function () {
   });
 
   let pendingNotePosition = null; // 더블클릭 시 생성 위치 저장 (null이면 + 버튼, center 사용)
+
+  function showLoginRequiredModal() {
+    $('#login-required-modal').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeLoginRequiredModal() {
+    $('#login-required-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $(document).on('click', '#login-required-modal .note-modal-backdrop[data-close="true"]', closeLoginRequiredModal);
+  $('#login-required-close').on('click', closeLoginRequiredModal);
+
   function closeNoteModal() {
     $('#note-modal').removeClass('is-open').attr('aria-hidden', 'true');
     pendingNotePosition = null;
@@ -506,7 +517,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (res.status === 403 || res.status === 409) {
@@ -544,7 +555,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (res.status === 403 || res.status === 404) {
@@ -678,7 +689,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (!res.ok) {

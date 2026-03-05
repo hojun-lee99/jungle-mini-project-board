@@ -643,6 +643,19 @@
       </div>
     </div>
 
+    <!-- 로그인 필요 모달 (미로그인 시 포스트잇 등 쓰기 작업 시 표시) -->
+    <div class="note-modal" id="login-required-modal" aria-hidden="true">
+      <div class="note-modal-backdrop" data-close="true"></div>
+      <div class="note-modal-panel">
+        <h3 class="note-modal-title">로그인해주세요</h3>
+        <p class="note-modal-hint">이 기능을 사용하려면 로그인이 필요합니다.</p>
+        <div class="note-modal-actions">
+          <button type="button" id="login-required-close" class="note-modal-btn note-modal-btn-secondary">취소</button>
+          <a href="/" class="note-modal-btn note-modal-btn-primary" id="login-required-goto">로그인 페이지로</a>
+        </div>
+      </div>
+    </div>
+
     <!-- 이미지 삽입 모달 -->
     <div class="image-modal" id="image-modal" aria-hidden="true">
       <div class="image-modal-backdrop" data-close="true"></div>
