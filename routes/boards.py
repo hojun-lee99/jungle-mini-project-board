@@ -9,6 +9,7 @@
 - 포스트잇 수정/이동 (PATCH /api/boards/<public_id>/notes/<note_id>)
 - 포스트잇 삭제 (DELETE /api/boards/<public_id>/notes/<note_id>)
 """
+import os
 import uuid
 
 from bson import ObjectId
@@ -144,11 +145,14 @@ def list_boards():
 # GET /api/boards/<public_id> - 보드 조회
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>", methods=["GET"])
+@jwt_required(optional=True)
 def get_board(public_id: str):
     """
     보드 조회 API
-    - 인증: 불필요
+    - 인증: 불필요 (로그인 시 current_user_id 포함)
+    - z_index: sticky_notes에는 서버가 원자적으로 부여한 값만 저장됨 (요구사항 4.4.1)
     """
+    current_user_id = _get_current_user_id()
     db = getattr(current_app, "db", None)
     if db is None:
         return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
@@ -156,33 +160,47 @@ def get_board(public_id: str):
     boards = db["boards"]
     sticky_notes = db["sticky_notes"]
 
-    board = boards.find_one({"public_id": public_id})
+    try:
+        board = boards.find_one({"public_id": str(public_id).strip()})
+    except Exception as e:
+        current_app.logger.exception("get_board find_one: %s", e)
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "보드를 불러올 수 없습니다.", "details": {}}}), 500
+
     if not board:
         return jsonify({
             "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
         }), 404
 
     board_id = board["_id"]
-    notes_cursor = sticky_notes.find({"board_id": board_id}).sort("z_index", 1)
-    notes_list = list(notes_cursor)
+    try:
+        notes_cursor = sticky_notes.find({"board_id": board_id}).sort([("z_index", 1), ("_id", 1)])
+        notes_list = list(notes_cursor)
+    except Exception as e:
+        current_app.logger.exception("get_board notes: %s", e)
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "보드를 불러올 수 없습니다.", "details": {}}}), 500
 
     image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
 
-    return jsonify({
+    payload = {
         "board": _serialize_board(board),
         "notes": [_serialize_note(n, image_base_url) for n in notes_list],
-    }), 200
+    }
+    if current_user_id:
+        payload["current_user_id"] = str(current_user_id)
+
+    return jsonify(payload), 200
 
 
 # ---------------------------------------------------------------------------
-# PATCH /api/boards/<public_id> - public_id 변경
+# PATCH /api/boards/<public_id> - public_id 또는 title 변경
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>", methods=["PATCH"])
 @jwt_required(optional=True)
 def update_board(public_id: str):
     """
-    보드 public_id 변경 API
-    - 인증: 필수 (보드 생성자만)
+    보드 수정 API
+    - public_id: 보드 링크 변경 (보드 생성자만)
+    - title: 보드 제목 변경 (보드 생성자만)
     """
     user_id = _get_current_user_id()
     if not user_id:
@@ -196,10 +214,7 @@ def update_board(public_id: str):
 
     data = request.get_json(silent=True) or {}
     new_public_id = data.get("public_id")
-    if not new_public_id:
-        return jsonify({
-            "error": {"code": "VALIDATION_ERROR", "message": "public_id가 필요합니다.", "details": {}}
-        }), 422
+    new_title = data.get("title")
 
     boards = db["boards"]
     board = boards.find_one({"public_id": public_id})
@@ -213,14 +228,22 @@ def update_board(public_id: str):
             "error": {"code": "FORBIDDEN", "message": "보드 생성자만 수정할 수 있습니다.", "details": {}}
         }), 403
 
-    boards.update_one(
-        {"_id": board["_id"]},
-        {"$set": {"public_id": new_public_id, "updated_at": utc_now()}}
-    )
+    if new_title is not None:
+        boards.update_one(
+            {"_id": board["_id"]},
+            {"$set": {"title": str(new_title).strip() or "", "updated_at": utc_now()}}
+        )
+        board["title"] = str(new_title).strip() or ""
 
-    # TODO: board_invalidated WebSocket broadcast (기존 room)
+    if new_public_id:
+        boards.update_one(
+            {"_id": board["_id"]},
+            {"$set": {"public_id": new_public_id, "updated_at": utc_now()}}
+        )
+        board["public_id"] = new_public_id
 
-    return jsonify({"public_id": new_public_id}), 200
+    result = {"title": board.get("title", ""), "public_id": board.get("public_id")}
+    return jsonify(result), 200
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +353,7 @@ def create_note(public_id: str):
     x = int(data.get("x", 0))
     y = int(data.get("y", 0))
 
+    # z_index: 보드 단위 next_z_index로 원자적 부여 (요구사항 4.4.1)
     # 300개 제한: note_count < 300 조건부 $inc
     result = boards.find_one_and_update(
         {"_id": board_id, "note_count": {"$lt": 300}},
@@ -341,7 +365,7 @@ def create_note(public_id: str):
             "error": {"code": "NOTE_LIMIT_EXCEEDED", "message": "보드당 포스트잇 최대 300개 제한을 초과했습니다.", "details": {}}
         }), 403
 
-    z_index = result["next_z_index"]
+    z_index = result.get("next_z_index", 1)
 
     now = utc_now()
     note_doc = {
@@ -361,6 +385,73 @@ def create_note(public_id: str):
 
     image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
     return jsonify(_serialize_note(note_doc, image_base_url)), 201
+
+
+# ---------------------------------------------------------------------------
+# POST /api/boards/<public_id>/images - 이미지 업로드 (포스트잇용)
+# ---------------------------------------------------------------------------
+ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif"}
+MAX_IMAGE_SIZE = 3 * 1024 * 1024  # 3MB
+
+
+@boards_bp.route("/<public_id>/images", methods=["POST"])
+@jwt_required(optional=True)
+def upload_image(public_id: str):
+    """포스트잇에 첨부할 이미지 업로드. 인증 필수."""
+    user_id = _get_current_user_id()
+    if not user_id:
+        return jsonify({
+            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
+        }), 401
+
+    db = getattr(current_app, "db", None)
+    if db is None:
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+
+    boards = db["boards"]
+    board = boards.find_one({"public_id": public_id})
+    if not board:
+        return jsonify({
+            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
+        }), 404
+
+    if "file" not in request.files:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "이미지 파일이 필요합니다.", "details": {}}
+        }), 400
+
+    file = request.files["file"]
+    if not file or not file.filename:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "파일을 선택해 주세요.", "details": {}}
+        }), 400
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_IMAGE_EXT:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "jpg, jpeg, png, gif만 업로드 가능합니다.", "details": {}}
+        }), 400
+
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_IMAGE_SIZE:
+        return jsonify({
+            "error": {"code": "VALIDATION_ERROR", "message": "이미지는 3MB 이하여야 합니다.", "details": {}}
+        }), 400
+
+    base_dir = current_app.static_folder or "static"
+    upload_dir = os.path.join(base_dir, "uploads", "boards", public_id)
+    os.makedirs(upload_dir, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(upload_dir, filename)
+    file.save(filepath)
+
+    image_key = f"uploads/boards/{public_id}/{filename}"
+    base_url = request.url_root.rstrip("/")
+    image_url = f"{base_url}/static/{image_key}"
+
+    return jsonify({"image_key": image_key, "url": image_url}), 201
 
 
 # ---------------------------------------------------------------------------

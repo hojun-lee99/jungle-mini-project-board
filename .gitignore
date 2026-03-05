@@ -10,3 +10,9 @@ venv/
 
 # npm
 node_modules
+
+# 로컬 전용 스크립트 (테스트/개발용, git 미포함)
+local/
+
+# 업로드된 이미지
+static/uploads/

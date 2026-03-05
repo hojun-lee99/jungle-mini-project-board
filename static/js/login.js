@@ -16,8 +16,11 @@ $(document).ready(function () {
       data: JSON.stringify({ username: username, password: password }),
       xhrFields: { withCredentials: true },
       success: function (data) {
-        // 로그인 성공 시 메인(내 칠판 목록) 페이지로 리다이렉트
-        window.location.href = "/";
+        // 로그인 성공 시 next 파라미터가 있으면 해당 페이지로, 없으면 메인으로 리다이렉트
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get('next');
+        const target = next && next.startsWith('/') && !next.startsWith('//') ? next : '/main';
+        window.location.href = target;
       },
       error: function (xhr) {
         const msg = xhr.responseJSON?.error || "로그인에 실패했습니다.";
