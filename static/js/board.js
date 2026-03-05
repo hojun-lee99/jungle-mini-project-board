@@ -82,7 +82,54 @@ $(document).ready(function () {
     } else {
       $('#btn-login').hide();
     }
+    const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+    if (isBoardOwner) {
+      $('#board-title').css('cursor', 'pointer');
+    } else {
+      $('#board-title').css('cursor', 'default');
+    }
   }
+
+  function openBoardTitleModal() {
+    $('#board-title-input').val(board?.title || '');
+    $('#board-title-modal').addClass('is-open').attr('aria-hidden', 'false');
+    setTimeout(() => $('#board-title-input').focus(), 100);
+  }
+  function closeBoardTitleModal() {
+    $('#board-title-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $(document).on('click', '#board-title-modal .note-modal-backdrop[data-close="true"]', closeBoardTitleModal);
+  $('#board-title-cancel').on('click', closeBoardTitleModal);
+  $('#board-title-save').on('click', function () {
+    const title = String($('#board-title-input').val() || '').trim();
+    fetch(`/api/boards/${publicId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title || '' }),
+    })
+      .then(async (res) => {
+        if (res.status === 401) { showLoginRequiredModal(); return null; }
+        if (res.status === 403) { alert('보드 생성자만 제목을 수정할 수 있습니다.'); return null; }
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.error?.message || '수정 실패'); }
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.title !== undefined) {
+          board = board || {};
+          board.title = data.title;
+          $('#board-title').text(data.title || '보드 제목');
+          closeBoardTitleModal();
+          alert('보드 제목이 저장되었습니다.');
+        }
+      })
+      .catch((err) => alert(err.message));
+  });
+
+  $(document).on('click', '#board-title', function () {
+    const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+    if (isBoardOwner) openBoardTitleModal();
+  });
 
   function updateNotePosition(noteId, x, y, version) {
     const note = notes.find((n) => n.id === noteId);
