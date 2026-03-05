@@ -1141,6 +1141,8 @@ $(document).ready(function () {
   function closeImageModal() {
     $('#image-modal').removeClass('is-open').attr('aria-hidden', 'true');
     pendingImagePosition = null;
+    imageInsertMode = false;
+    $('#btn-add-image').removeClass('image-mode-active');
   }
 
   $(document).on(
