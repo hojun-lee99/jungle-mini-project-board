@@ -51,7 +51,11 @@ def _serialize_note(doc, public_id=None):
     image_key = doc.get("image_key")  # image_ref (filename)
     image_url = None
     if image_key and public_id:
-        image_url = f"{current_app.config['IMAGE_BASE_URL']}/{image_key}"
+        base = current_app.config.get("IMAGE_BASE_URL")
+        if base:
+            image_url = f"{base.rstrip('/')}/{image_key}"
+        else:
+            image_url = f"/api/boards/{public_id}/images/{image_key}"
     return {
         "id": str(doc["_id"]),
         "owner_user_id": str(doc["owner_user_id"]),
