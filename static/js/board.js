@@ -67,6 +67,13 @@ $(document).ready(function () {
     }
   })
 
+  socket.on('note_deleted', function (data) {
+    if (data && data.note_id) {
+      notes = notes.filter((n) => String(n.id) !== String(data.note_id))
+      renderNotes();
+    }
+  })
+
   function loadBoard() {
     fetch(`/api/boards/${publicId}`, { credentials: 'include' })
       .then(async (res) => {
@@ -810,6 +817,11 @@ $(document).ready(function () {
           renderNotes();
           renderWingbarMyNotes();
           closeNoteDetailModal();
+
+          socket.emit('delete_note', {
+            public_id: publicId,
+            note_id: noteId,
+          })
         }
       })
       .catch(() => {});
