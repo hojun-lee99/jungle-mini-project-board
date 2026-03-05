@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>크래프톤 정글 - 보드</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
     <style>
       .bg-logo {
         position: relative;
@@ -43,7 +44,7 @@
       .note-drag-handle::before {
         content: '⋮⋮';
         font-size: 12px;
-        color: rgba(0,0,0,0.3);
+        color: rgba(0, 0, 0, 0.3);
         padding-left: 4px;
       }
       .note-body {
@@ -76,7 +77,10 @@
       .header-pointer-through .header-clickable {
         pointer-events: auto;
       }
-      .select-none { user-select: none; -webkit-user-select: none; }
+      .select-none {
+        user-select: none;
+        -webkit-user-select: none;
+      }
       .wingbar-backdrop {
         position: fixed;
         inset: 0;
@@ -85,7 +89,9 @@
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
-        transition: opacity 0.2s, visibility 0.2s;
+        transition:
+          opacity 0.2s,
+          visibility 0.2s;
       }
       .wingbar-backdrop.is-open {
         opacity: 1;
@@ -133,7 +139,9 @@
         color: #6b7280;
         cursor: pointer;
         border-radius: 6px;
-        transition: background 0.2s, color 0.2s;
+        transition:
+          background 0.2s,
+          color 0.2s;
       }
       .wingbar-close:hover {
         background: #f3f4f6;
@@ -156,7 +164,9 @@
         font-size: 15px;
         text-decoration: none;
         border-radius: 8px;
-        transition: background 0.2s, color 0.2s;
+        transition:
+          background 0.2s,
+          color 0.2s;
       }
       .wingbar-item:hover {
         background: #f3f4f6;
@@ -229,7 +239,9 @@
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
-        transition: opacity 0.2s, visibility 0.2s;
+        transition:
+          opacity 0.2s,
+          visibility 0.2s;
       }
       .image-modal.is-open {
         opacity: 1;
@@ -239,7 +251,7 @@
       .image-modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(0,0,0,0.4);
+        background: rgba(0, 0, 0, 0.4);
       }
       .image-modal-panel {
         position: relative;
@@ -248,7 +260,7 @@
         padding: 24px;
         background: white;
         border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
       }
       .image-modal-title {
         margin: 0 0 16px;
@@ -282,11 +294,11 @@
         color: #374151;
       }
       .image-modal-btn-primary {
-        background: #05D182;
+        background: #05d182;
         color: white;
       }
       #btn-add-image.image-mode-active {
-        outline: 2px solid #05D182;
+        outline: 2px solid #05d182;
         outline-offset: 2px;
       }
       /* 새 포스트잇 모달 */
@@ -300,7 +312,9 @@
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
-        transition: opacity 0.2s, visibility 0.2s;
+        transition:
+          opacity 0.2s,
+          visibility 0.2s;
       }
       .note-modal.is-open {
         opacity: 1;
@@ -310,7 +324,7 @@
       .note-modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(0,0,0,0.4);
+        background: rgba(0, 0, 0, 0.4);
       }
       .note-modal-panel {
         position: relative;
@@ -319,7 +333,7 @@
         padding: 24px;
         background: white;
         border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
       }
       .note-modal-title {
         margin: 0 0 8px;
@@ -344,8 +358,8 @@
         outline: none;
       }
       .note-modal-textarea:focus {
-        border-color: #05D182;
-        box-shadow: 0 0 0 2px rgba(5,209,130,0.2);
+        border-color: #05d182;
+        box-shadow: 0 0 0 2px rgba(5, 209, 130, 0.2);
       }
       .note-modal-actions {
         display: flex;
@@ -365,7 +379,7 @@
         color: #374151;
       }
       .note-modal-btn-primary {
-        background: #05D182;
+        background: #05d182;
         color: white;
       }
       /* 포스트잇 상세 모달 (요구사항 4.4) */
@@ -379,7 +393,9 @@
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
-        transition: opacity 0.2s, visibility 0.2s;
+        transition:
+          opacity 0.2s,
+          visibility 0.2s;
       }
       .note-detail-modal.is-open {
         opacity: 1;
@@ -389,7 +405,7 @@
       .note-detail-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0, 0, 0, 0.5);
       }
       .note-detail-panel {
         position: relative;
@@ -399,7 +415,7 @@
         padding: 24px;
         background: white;
         border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
         overflow-y: auto;
       }
       .note-detail-text {
@@ -461,7 +477,11 @@
           />
         </button>
 
-        <button id="btn-add-image" class="hover:scale-110 transition transform" title="이미지 추가 모드 (클릭 후 보드에서 위치 선택)">
+        <button
+          id="btn-add-image"
+          class="hover:scale-110 transition transform"
+          title="이미지 추가 모드 (클릭 후 보드에서 위치 선택)"
+        >
           <img
             src="{{ url_for('static', filename='icons/image.svg') }}"
             alt="이미지 추가"
@@ -483,18 +503,32 @@
     <main
       id="board-container"
       class="fixed inset-0 min-w-full min-h-full bg-logo z-10 pt-24"
-      style="overflow:auto;"
+      style="overflow: auto"
       data-public-id="{{ public_id }}"
     >
-      <div id="board-click-layer" style="position:absolute;inset:0;z-index:0;cursor:default;"></div>
+      <div
+        id="board-click-layer"
+        style="position: absolute; inset: 0; z-index: 0; cursor: default"
+      ></div>
     </main>
 
     <!-- 우측 윙바 -->
-    <div class="wingbar-backdrop" id="wingbar-backdrop" aria-hidden="true"></div>
+    <div
+      class="wingbar-backdrop"
+      id="wingbar-backdrop"
+      aria-hidden="true"
+    ></div>
     <aside class="wingbar" id="wingbar" aria-hidden="true">
       <div class="wingbar-header">
         <span class="wingbar-title">메뉴</span>
-        <button type="button" id="btn-close-wingbar" class="wingbar-close" aria-label="닫기">×</button>
+        <button
+          type="button"
+          id="btn-close-wingbar"
+          class="wingbar-close"
+          aria-label="닫기"
+        >
+          ×
+        </button>
       </div>
       <div class="wingbar-body">
         <a href="/main" class="wingbar-item">
@@ -508,7 +542,13 @@
         <div class="wingbar-section">
           <h3 class="wingbar-section-title">내가 쓴 메모</h3>
           <ul class="wingbar-note-list" id="wingbar-my-notes"></ul>
-          <p class="wingbar-empty" id="wingbar-my-notes-empty" style="display:none;">쓴 메모가 없습니다.</p>
+          <p
+            class="wingbar-empty"
+            id="wingbar-my-notes-empty"
+            style="display: none"
+          >
+            쓴 메모가 없습니다.
+          </p>
         </div>
       </div>
     </aside>
@@ -547,8 +587,20 @@
         <p class="note-modal-hint">내용을 입력하고 추가를 누르면 마우스 커서 위치에 포스트잇이 생성됩니다.</p>
         <textarea id="note-modal-text" class="note-modal-textarea" placeholder="메모 내용을 입력하세요..." rows="4"></textarea>
         <div class="note-modal-actions">
-          <button type="button" id="note-modal-cancel" class="note-modal-btn note-modal-btn-secondary">취소</button>
-          <button type="button" id="note-modal-confirm" class="note-modal-btn note-modal-btn-primary">추가</button>
+          <button
+            type="button"
+            id="note-modal-cancel"
+            class="note-modal-btn note-modal-btn-secondary"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            id="note-modal-confirm"
+            class="note-modal-btn note-modal-btn-primary"
+          >
+            추가
+          </button>
         </div>
       </div>
     </div>
@@ -559,18 +611,59 @@
       <div class="note-detail-panel">
         <div id="note-detail-view">
           <p class="note-detail-text" id="note-detail-text"></p>
-          <img class="note-detail-image" id="note-detail-image" alt="" style="display:none;" />
+          <img
+            class="note-detail-image"
+            id="note-detail-image"
+            alt=""
+            style="display: none"
+          />
           <div class="note-detail-actions" id="note-detail-actions">
-            <button type="button" id="note-detail-edit" class="note-modal-btn note-modal-btn-secondary" style="display:none;">수정</button>
-            <button type="button" id="note-detail-delete" class="note-modal-btn note-modal-btn-secondary" style="display:none;">삭제</button>
-            <button type="button" id="note-detail-close" class="note-modal-btn note-modal-btn-primary">닫기</button>
+            <button
+              type="button"
+              id="note-detail-edit"
+              class="note-modal-btn note-modal-btn-secondary"
+              style="display: none"
+            >
+              수정
+            </button>
+            <button
+              type="button"
+              id="note-detail-delete"
+              class="note-modal-btn note-modal-btn-secondary"
+              style="display: none"
+            >
+              삭제
+            </button>
+            <button
+              type="button"
+              id="note-detail-close"
+              class="note-modal-btn note-modal-btn-primary"
+            >
+              닫기
+            </button>
           </div>
         </div>
-        <div id="note-detail-edit-view" style="display:none;">
-          <textarea id="note-detail-edit-textarea" class="note-detail-edit-textarea" placeholder="메모 내용"></textarea>
+        <div id="note-detail-edit-view" style="display: none">
+          <textarea
+            id="note-detail-edit-textarea"
+            class="note-detail-edit-textarea"
+            placeholder="메모 내용"
+          ></textarea>
           <div class="note-detail-actions">
-            <button type="button" id="note-detail-save" class="note-modal-btn note-modal-btn-primary">저장</button>
-            <button type="button" id="note-detail-cancel-edit" class="note-modal-btn note-modal-btn-secondary">취소</button>
+            <button
+              type="button"
+              id="note-detail-save"
+              class="note-modal-btn note-modal-btn-primary"
+            >
+              저장
+            </button>
+            <button
+              type="button"
+              id="note-detail-cancel-edit"
+              class="note-modal-btn note-modal-btn-secondary"
+            >
+              취소
+            </button>
           </div>
         </div>
       </div>
@@ -607,10 +700,27 @@
       <div class="image-modal-backdrop" data-close="true"></div>
       <div class="image-modal-panel">
         <h3 class="image-modal-title">이미지 추가</h3>
-        <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif" class="image-modal-input" />
+        <input
+          type="file"
+          id="image-file-input"
+          accept="image/jpeg,image/png,image/gif"
+          class="image-modal-input"
+        />
         <div class="image-modal-actions">
-          <button type="button" id="image-modal-cancel" class="image-modal-btn image-modal-btn-secondary">취소</button>
-          <button type="button" id="image-modal-confirm" class="image-modal-btn image-modal-btn-primary">추가</button>
+          <button
+            type="button"
+            id="image-modal-cancel"
+            class="image-modal-btn image-modal-btn-secondary"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            id="image-modal-confirm"
+            class="image-modal-btn image-modal-btn-primary"
+          >
+            추가
+          </button>
         </div>
       </div>
     </div>
