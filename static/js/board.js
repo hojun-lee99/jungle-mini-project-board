@@ -238,11 +238,28 @@ $(document).ready(function () {
   });
 
   // 이미지 추가 모드
+  function openImageGuideModal() {
+    $('#image-guide-modal').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeImageGuideModal() {
+    $('#image-guide-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
   $('#btn-add-image').on('click', function (e) {
     e.stopPropagation();
-    imageInsertMode = !imageInsertMode;
-    $(this).toggleClass('image-mode-active', imageInsertMode);
-    if (!imageInsertMode) closeImageModal();
+    if (imageInsertMode) {
+      imageInsertMode = false;
+      $(this).removeClass('image-mode-active');
+      closeImageModal();
+    } else {
+      openImageGuideModal();
+    }
+  });
+  $(document).on('click', '#image-guide-modal .note-modal-backdrop[data-close="true"]', closeImageGuideModal);
+  $('#image-guide-cancel').on('click', closeImageGuideModal);
+  $('#image-guide-confirm').on('click', function () {
+    closeImageGuideModal();
+    imageInsertMode = true;
+    $('#btn-add-image').addClass('image-mode-active');
   });
 
   // 윙바
