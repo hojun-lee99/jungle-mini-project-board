@@ -5,14 +5,8 @@ $(document).ready(function () {
     console.error('public_id가 없습니다.');
     return;
   }
-  $('#login-required-goto').attr(
-    'href',
-    '/?next=' + encodeURIComponent('/boards/' + publicId),
-  );
-  $('#btn-login').attr(
-    'href',
-    '/?next=' + encodeURIComponent('/boards/' + publicId),
-  );
+  $('#login-required-goto').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
+  $('#btn-login').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
 
   let board = null;
   let notes = [];
@@ -137,17 +131,56 @@ $(document).ready(function () {
     } else {
       $('#btn-login').hide();
     }
-    const isBoardOwner = !!(
-      currentUserId &&
-      board &&
-      String(board.owner_user_id) === String(currentUserId)
-    );
+    const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
     if (isBoardOwner) {
       $('#board-title').css('cursor', 'pointer');
+      $('#wingbar-regenerate-link').show();
     } else {
       $('#board-title').css('cursor', 'default');
+      $('#wingbar-regenerate-link').hide();
     }
   }
+
+  function openBoardTitleModal() {
+    $('#board-title-input').val(board?.title || '');
+    $('#board-title-modal').addClass('is-open').attr('aria-hidden', 'false');
+    setTimeout(() => $('#board-title-input').focus(), 100);
+  }
+  function closeBoardTitleModal() {
+    $('#board-title-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $(document).on('click', '#board-title-modal .note-modal-backdrop[data-close="true"]', closeBoardTitleModal);
+  $('#board-title-cancel').on('click', closeBoardTitleModal);
+  $('#board-title-save').on('click', function () {
+    const title = String($('#board-title-input').val() || '').trim();
+    fetch(`/api/boards/${publicId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title || '' }),
+    })
+      .then(async (res) => {
+        if (res.status === 401) { showLoginRequiredModal(); return null; }
+        if (res.status === 403) { alert('보드 생성자만 제목을 수정할 수 있습니다.'); return null; }
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.error?.message || '수정 실패'); }
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.title !== undefined) {
+          board = board || {};
+          board.title = data.title;
+          $('#board-title').text(data.title || '보드 제목');
+          closeBoardTitleModal();
+          alert('보드 제목이 저장되었습니다.');
+        }
+      })
+      .catch((err) => alert(err.message));
+  });
+
+  $(document).on('click', '#board-title', function () {
+    const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+    if (isBoardOwner) openBoardTitleModal();
+  });
 
   function openBoardTitleModal() {
     $('#board-title-input').val(board?.title || '');
@@ -348,11 +381,28 @@ $(document).ready(function () {
   });
 
   // 이미지 추가 모드
+  function openImageGuideModal() {
+    $('#image-guide-modal').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeImageGuideModal() {
+    $('#image-guide-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
   $('#btn-add-image').on('click', function (e) {
     e.stopPropagation();
-    imageInsertMode = !imageInsertMode;
-    $(this).toggleClass('image-mode-active', imageInsertMode);
-    if (!imageInsertMode) closeImageModal();
+    if (imageInsertMode) {
+      imageInsertMode = false;
+      $(this).removeClass('image-mode-active');
+      closeImageModal();
+    } else {
+      openImageGuideModal();
+    }
+  });
+  $(document).on('click', '#image-guide-modal .note-modal-backdrop[data-close="true"]', closeImageGuideModal);
+  $('#image-guide-cancel').on('click', closeImageGuideModal);
+  $('#image-guide-confirm').on('click', function () {
+    closeImageGuideModal();
+    imageInsertMode = true;
+    $('#btn-add-image').addClass('image-mode-active');
   });
 
   // 윙바
@@ -382,6 +432,56 @@ $(document).ready(function () {
     openNoteDetailModal(noteId);
   });
 
+  // 링크 재발급 (보드 생성자만)
+  function openLinkRegenerateModal() {
+    $('#link-regenerate-modal').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeLinkRegenerateModal() {
+    $('#link-regenerate-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $('#wingbar-regenerate-link').on('click', function () {
+    closeWingbar();
+    openLinkRegenerateModal();
+  });
+  $(document).on('click', '#link-regenerate-modal .note-modal-backdrop[data-close="true"]', closeLinkRegenerateModal);
+  $('#link-regenerate-cancel').on('click', closeLinkRegenerateModal);
+  $('#link-regenerate-confirm').on('click', function () {
+    const newPublicId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+    const $btn = $('#link-regenerate-confirm');
+    $btn.prop('disabled', true);
+    fetch(`/api/boards/${publicId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ public_id: newPublicId }),
+    })
+      .then(async (res) => {
+        if (res.status === 401) { showLoginRequiredModal(); return null; }
+        if (res.status === 403) { alert('보드 생성자만 링크를 변경할 수 있습니다.'); return null; }
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d?.error?.message || '링크 변경에 실패했습니다.');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.public_id) {
+          closeLinkRegenerateModal();
+          window.location.href = '/boards/' + data.public_id;
+        }
+      })
+      .catch((err) => {
+        $btn.prop('disabled', false);
+        alert(err.message);
+      });
+  });
+
   let pendingNotePosition = null; // 더블클릭 시 생성 위치 저장 (null이면 + 버튼 경로)
   let lastMousePos = null; // 마지막 마우스 위치 (키보드로 추가 시 폴백용)
 
@@ -389,15 +489,9 @@ $(document).ready(function () {
     $('#login-required-modal').addClass('is-open').attr('aria-hidden', 'false');
   }
   function closeLoginRequiredModal() {
-    $('#login-required-modal')
-      .removeClass('is-open')
-      .attr('aria-hidden', 'true');
+    $('#login-required-modal').removeClass('is-open').attr('aria-hidden', 'true');
   }
-  $(document).on(
-    'click',
-    '#login-required-modal .note-modal-backdrop[data-close="true"]',
-    closeLoginRequiredModal,
-  );
+  $(document).on('click', '#login-required-modal .note-modal-backdrop[data-close="true"]', closeLoginRequiredModal);
   $('#login-required-close').on('click', closeLoginRequiredModal);
 
   function closeNoteModal() {
@@ -444,20 +538,10 @@ $(document).ready(function () {
           : null;
       };
       const isKeyboardTrigger = e.detail === 0;
-      const fromClick = !isKeyboardTrigger
-        ? getPosFromCoords(e.clientX, e.clientY)
-        : null;
-      const fromLastMouse = lastMousePos
-        ? getPosFromCoords(lastMousePos.clientX, lastMousePos.clientY)
-        : null;
-      const centerX = Math.max(
-        20,
-        Math.floor(window.innerWidth / 2 - rect.left - 80),
-      );
-      const centerY = Math.max(
-        20,
-        Math.floor(window.innerHeight / 2 - rect.top - 50),
-      );
+      const fromClick = !isKeyboardTrigger ? getPosFromCoords(e.clientX, e.clientY) : null;
+      const fromLastMouse = lastMousePos ? getPosFromCoords(lastMousePos.clientX, lastMousePos.clientY) : null;
+      const centerX = Math.max(20, Math.floor(window.innerWidth / 2 - rect.left - 80));
+      const centerY = Math.max(20, Math.floor(window.innerHeight / 2 - rect.top - 50));
       if (fromClick) {
         x = fromClick.x;
         y = fromClick.y;
