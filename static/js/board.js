@@ -12,12 +12,55 @@ $(document).ready(function () {
   let imageInsertMode = false;
   let pendingImagePosition = null;
 
+  const socket = io('/', {
+    withCredentials: true,
+  });
+
+  socket.on('connect', function () {
+    console.log('웹소켓 서버에 연결되었습니다!');
+
+    socket.emit('join_board', { public_id: publicId });
+  });
+
+  socket.on('connect_error', function (err) {
+    console.error('웹소켓 연결 실패 (인증 오류 등):', err.message);
+  });
+
+  socket.on('disconnect', function () {
+    console.log('웹소켓 연결이 끊어졌습니다.');
+  });
+
+  socket.on('note_moved', function (data) {
+    if (dragging.noteId !== String(data.note_id)) {
+      const $note = $container.find(`.note[data-note-id="${data.note_id}"]`);
+
+      if ($note.length) {
+        $note.animate(
+          {
+            left: data.x + 'px',
+            top: data.y + 'px',
+          },
+          300,
+        );
+
+        const noteObj = notes.find(
+          (n) => String(n.id) === String(data.note_id),
+        );
+        if (noteObj) {
+          noteObj.x = data.x;
+          noteObj.y = data.y;
+        }
+      }
+    }
+  });
+
   function loadBoard() {
     fetch(`/api/boards/${publicId}`, { credentials: 'include' })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          if (res.status === 404) throw new Error('유효하지 않은 보드 링크입니다.');
+          if (res.status === 404)
+            throw new Error('유효하지 않은 보드 링크입니다.');
           throw new Error(data?.error?.message || '보드를 불러올 수 없습니다.');
         }
         return data;
@@ -43,7 +86,9 @@ $(document).ready(function () {
       return;
     }
 
-    const myNotes = notes.filter((n) => String(n.owner_user_id) === String(currentUserId));
+    const myNotes = notes.filter(
+      (n) => String(n.owner_user_id) === String(currentUserId),
+    );
 
     if (myNotes.length === 0) {
       $empty.text('쓴 메모가 없습니다.').show();
@@ -68,8 +113,12 @@ $(document).ready(function () {
     $container.find('.note').removeClass('is-highlighted');
     $('#wingbar-my-notes .wingbar-note-item').removeClass('is-active');
     if (noteId) {
-      $container.find('.note[data-note-id="' + noteId + '"]').addClass('is-highlighted');
-      $('#wingbar-my-notes .wingbar-note-item[data-note-id="' + noteId + '"]').addClass('is-active');
+      $container
+        .find('.note[data-note-id="' + noteId + '"]')
+        .addClass('is-highlighted');
+      $(
+        '#wingbar-my-notes .wingbar-note-item[data-note-id="' + noteId + '"]',
+      ).addClass('is-active');
     }
   }
 
@@ -80,11 +129,29 @@ $(document).ready(function () {
   function updateNotePosition(noteId, x, y, version) {
     const note = notes.find((n) => n.id === noteId);
     if (!note) return;
+
+    const previousX = note.x;
+    const previousY = note.y;
+
+    note.x = x;
+    note.y = y;
+
+    socket.emit('move_note', {
+      public_id: publicId,
+      note_id: noteId,
+      x: x,
+      y: y,
+    });
+
     fetch(`/api/boards/${publicId}/notes/${noteId}`, {
       method: 'PATCH',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ version: note.version, x: Math.round(x), y: Math.round(y) }),
+      body: JSON.stringify({
+        version: note.version,
+        x: Math.round(x),
+        y: Math.round(y),
+      }),
     })
       .then(async (res) => {
         if (res.status === 401) {
@@ -94,7 +161,10 @@ $(document).ready(function () {
         if (res.status === 403 || res.status === 409) {
           const data = await res.json().catch(() => ({}));
           loadBoard();
-          alert(data?.error?.message || '이동할 수 없습니다. 최신 상태로 새로고침했습니다.');
+          alert(
+            data?.error?.message ||
+              '이동할 수 없습니다. 최신 상태로 새로고침했습니다.',
+          );
           return null;
         }
         if (!res.ok) return null;
@@ -128,12 +198,19 @@ $(document).ready(function () {
       const $body = $('<div>').addClass('note-body');
       if (note.image_url) {
         $body.append(
-          $('<img>')
-            .attr('src', note.image_url)
-            .css({ maxWidth: '100%', display: 'block', marginBottom: 4, borderRadius: 4 })
+          $('<img>').attr('src', note.image_url).css({
+            maxWidth: '100%',
+            display: 'block',
+            marginBottom: 4,
+            borderRadius: 4,
+          }),
         );
       }
-      $body.append($('<div>').addClass('note-text').text(note.text || ''));
+      $body.append(
+        $('<div>')
+          .addClass('note-text')
+          .text(note.text || ''),
+      );
       $el.append($body);
 
       $container.append($el);
@@ -157,7 +234,9 @@ $(document).ready(function () {
         }
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error?.message || '포스트잇 생성에 실패했습니다.');
+          throw new Error(
+            data?.error?.message || '포스트잇 생성에 실패했습니다.',
+          );
         }
         return res.json();
       })
@@ -191,10 +270,14 @@ $(document).ready(function () {
 
   // 윙바
   function openWingbar() {
-    $('#wingbar-backdrop, #wingbar').addClass('is-open').attr('aria-hidden', 'false');
+    $('#wingbar-backdrop, #wingbar')
+      .addClass('is-open')
+      .attr('aria-hidden', 'false');
   }
   function closeWingbar() {
-    $('#wingbar-backdrop, #wingbar').removeClass('is-open').attr('aria-hidden', 'true');
+    $('#wingbar-backdrop, #wingbar')
+      .removeClass('is-open')
+      .attr('aria-hidden', 'true');
   }
   $('#btn-menu').on('click', openWingbar);
   $('#btn-close-wingbar').on('click', function () {
@@ -227,7 +310,11 @@ $(document).ready(function () {
   $('#btn-add-note').on('click', function () {
     openNoteModal(null);
   });
-  $(document).on('click', '.note-modal-backdrop[data-close="true"]', closeNoteModal);
+  $(document).on(
+    'click',
+    '.note-modal-backdrop[data-close="true"]',
+    closeNoteModal,
+  );
   $('#note-modal-cancel').on('click', closeNoteModal);
 
   $(document).on('click', '#note-modal-confirm', function () {
@@ -255,7 +342,13 @@ $(document).ready(function () {
   function tryOpenNoteModalAt(clientX, clientY) {
     if (imageInsertMode) return;
     const rect = $container[0].getBoundingClientRect();
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return false;
+    if (
+      clientX < rect.left ||
+      clientX > rect.right ||
+      clientY < rect.top ||
+      clientY > rect.bottom
+    )
+      return false;
     const x = Math.max(20, clientX - rect.left);
     const y = Math.max(20, clientY - rect.top);
     openNoteModal({ x, y });
@@ -266,11 +359,26 @@ $(document).ready(function () {
     'mousedown',
     function (e) {
       if (e.button !== 0) return;
-      if ($(e.target).closest('.note, .note-modal, .note-detail-modal, .image-modal, .wingbar').length) return;
+      if (
+        $(e.target).closest(
+          '.note, .note-modal, .note-detail-modal, .image-modal, .wingbar',
+        ).length
+      )
+        return;
       const rect = $container[0].getBoundingClientRect();
-      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+      if (
+        e.clientX < rect.left ||
+        e.clientX > rect.right ||
+        e.clientY < rect.top ||
+        e.clientY > rect.bottom
+      )
+        return;
       const now = Date.now();
-      if (now - lastBoardMousedown.t <= DBLCLICK_DELAY && Math.abs(e.clientX - lastBoardMousedown.x) <= DBLCLICK_MOVE && Math.abs(e.clientY - lastBoardMousedown.y) <= DBLCLICK_MOVE) {
+      if (
+        now - lastBoardMousedown.t <= DBLCLICK_DELAY &&
+        Math.abs(e.clientX - lastBoardMousedown.x) <= DBLCLICK_MOVE &&
+        Math.abs(e.clientY - lastBoardMousedown.y) <= DBLCLICK_MOVE
+      ) {
         e.preventDefault();
         e.stopPropagation();
         lastBoardMousedown = { t: 0, x: 0, y: 0 };
@@ -279,19 +387,24 @@ $(document).ready(function () {
       }
       lastBoardMousedown = { t: now, x: e.clientX, y: e.clientY };
     },
-    true
+    true,
   );
 
   document.addEventListener(
     'dblclick',
     function (e) {
       if ($(e.target).closest('.note').length) return;
-      if ($(e.target).closest('.note-modal, .note-detail-modal, .image-modal, .wingbar').length) return;
+      if (
+        $(e.target).closest(
+          '.note-modal, .note-detail-modal, .image-modal, .wingbar',
+        ).length
+      )
+        return;
       if (tryOpenNoteModalAt(e.clientX, e.clientY)) {
         lastBoardMousedown = { t: 0, x: 0, y: 0 };
       }
     },
-    true
+    true,
   );
 
   // 포스트잇 더블클릭 → 수정 모달
@@ -304,7 +417,15 @@ $(document).ready(function () {
 
   // 포스트잇 드래그로 이동 (이동 8px 이상일 때만 드래그, 그 전에는 텍스트 선택 가능)
   const DRAG_THRESHOLD = 8;
-  let dragging = { $el: null, noteId: null, startX: 0, startY: 0, startLeft: 0, startTop: 0, active: false };
+  let dragging = {
+    $el: null,
+    noteId: null,
+    startX: 0,
+    startY: 0,
+    startLeft: 0,
+    startTop: 0,
+    active: false,
+  };
 
   // 포스트잇 상세 모달 (요구사항 4.4)
   let detailModalNoteId = null;
@@ -326,7 +447,9 @@ $(document).ready(function () {
     } else {
       $img.hide();
     }
-    const isOwner = !!(currentUserId && String(note.owner_user_id) === String(currentUserId));
+    const isOwner = !!(
+      currentUserId && String(note.owner_user_id) === String(currentUserId)
+    );
     if (isOwner) {
       $('#note-detail-edit, #note-detail-delete').show();
     } else {
@@ -339,7 +462,9 @@ $(document).ready(function () {
 
   function closeNoteDetailModal() {
     if (detailModalNoteId) {
-      const $noteEl = $container.find('.note[data-note-id="' + detailModalNoteId + '"]');
+      const $noteEl = $container.find(
+        '.note[data-note-id="' + detailModalNoteId + '"]',
+      );
       if ($noteEl.length && detailModalOriginalZ != null) {
         $noteEl.css('z-index', detailModalOriginalZ);
       }
@@ -349,7 +474,11 @@ $(document).ready(function () {
     $('#note-detail-modal').removeClass('is-open').attr('aria-hidden', 'true');
   }
 
-  $(document).on('click', '.note-detail-backdrop[data-close="true"]', closeNoteDetailModal);
+  $(document).on(
+    'click',
+    '.note-detail-backdrop[data-close="true"]',
+    closeNoteDetailModal,
+  );
   $('#note-detail-close').on('click', closeNoteDetailModal);
 
   $('#note-detail-edit').on('click', function () {
@@ -383,7 +512,10 @@ $(document).ready(function () {
         if (res.status === 403 || res.status === 409) {
           const data = await res.json().catch(() => ({}));
           loadBoard();
-          alert(data?.error?.message || '수정할 수 없습니다. 최신 상태로 새로고침했습니다.');
+          alert(
+            data?.error?.message ||
+              '수정할 수 없습니다. 최신 상태로 새로고침했습니다.',
+          );
           closeNoteDetailModal();
           return null;
         }
@@ -406,7 +538,10 @@ $(document).ready(function () {
     if (!confirm('이 포스트잇을 삭제할까요?')) return;
     const noteId = detailModalNoteId;
     if (!noteId) return;
-    fetch(`/api/boards/${publicId}/notes/${noteId}`, { method: 'DELETE', credentials: 'include' })
+    fetch(`/api/boards/${publicId}/notes/${noteId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
       .then(async (res) => {
         if (res.status === 401) {
           alert('로그인이 필요합니다.');
@@ -459,12 +594,18 @@ $(document).ready(function () {
   $(document)
     .on('mousemove', function (e) {
       if (!dragging.$el) return;
+
       const dx = e.clientX - dragging.startX;
       const dy = e.clientY - dragging.startY;
-      if (!dragging.active && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+      if (
+        !dragging.active &&
+        (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)
+      ) {
         dragging.active = true;
       }
+
       if (!dragging.active) return;
+
       dragging.$el.css({
         left: Math.max(0, dragging.startLeft + dx) + 'px',
         top: Math.max(0, dragging.startTop + dy) + 'px',
@@ -478,7 +619,15 @@ $(document).ready(function () {
         const top = parseFloat(dragging.$el.css('top')) || 0;
         updateNotePosition(dragging.noteId, left, top);
       }
-      dragging = { $el: null, noteId: null, startX: 0, startY: 0, startLeft: 0, startTop: 0, active: false };
+      dragging = {
+        $el: null,
+        noteId: null,
+        startX: 0,
+        startY: 0,
+        startLeft: 0,
+        startTop: 0,
+        active: false,
+      };
     });
 
   // 보드 클릭 (이미지 모드만) → 이미지 삽입 UI
@@ -501,7 +650,11 @@ $(document).ready(function () {
     pendingImagePosition = null;
   }
 
-  $(document).on('click', '.image-modal-backdrop[data-close="true"]', closeImageModal);
+  $(document).on(
+    'click',
+    '.image-modal-backdrop[data-close="true"]',
+    closeImageModal,
+  );
   $('#image-modal-cancel').on('click', closeImageModal);
 
   $('#image-modal-confirm').on('click', function () {
@@ -530,7 +683,9 @@ $(document).ready(function () {
         }
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error?.message || '이미지 업로드에 실패했습니다.');
+          throw new Error(
+            data?.error?.message || '이미지 업로드에 실패했습니다.',
+          );
         }
         return res.json();
       })
