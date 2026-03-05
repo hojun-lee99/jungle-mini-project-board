@@ -74,6 +74,17 @@ $(document).ready(function () {
     }
   })
 
+  socket.on('note_updated', function (data) {
+    if (data && data.note) {
+      const idx = notes.findIndex((n) => String(n.id) === String(data.note.id));
+
+      if (idx !== -1) {
+        notes[idx] = data.note;
+        renderNotes();
+      }
+    }
+  })
+
   function loadBoard() {
     fetch(`/api/boards/${publicId}`, { credentials: 'include' })
       .then(async (res) => {
@@ -786,6 +797,11 @@ $(document).ready(function () {
           renderNotes();
           renderWingbarMyNotes();
           closeNoteDetailModal();
+
+          socket.emit('update_note', {
+            public_id: publicId,
+            note: updated
+          })
         }
       })
       .catch(() => {});
