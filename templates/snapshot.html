@@ -60,8 +60,27 @@
             <h1>내 보드 기록</h1>
             <div class="content-body">
                 <ul class="board-grid" id="card-list">
-
+                    {% for s in snapshots|default([]) %}
+                    <li class="board-card" data-snapshot-id="{{ s.id }}">
+                        <div class="board-thumb board-thumb-clickable" data-image-url="{{ s.image_url }}">
+                            <img src="{{ s.image_url }}" alt="">
+                        </div>
+                        <div class="board-footer">
+                            <div class="board-name">{{ s.title or "제목 없음" }}</div>
+                            <div class="board-footer-actions">
+                                <div class="board-public">
+                                    <span>공개여부</span>
+                                    <input type="checkbox" class="public-toggle" data-id="{{ s.id }}" {% if s.is_public %}checked{% endif %}>
+                                </div>
+                                <button type="button" class="board-delete-btn" data-snapshot-id="{{ s.id }}" title="삭제">삭제</button>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
                 </ul>
+                {% if not snapshots %}
+                <p class="snapshot-empty" id="snapshot-empty">보드 기록이 없습니다.</p>
+                {% endif %}
             </div>
         </main>
 
@@ -115,52 +134,7 @@
             });
 
 
-            // 새로고침 할 때마다 스냅샷 리스트 조회
-            $(document).ready(function () { showSnapshots() });
-
-            function showSnapshots() {
-                $.ajax({
-                    type: "GET",
-                    url: "/api/snapshots/mine",
-                    data: {},
-                    success: function (response) {
-                        console.log(response);
-                        let shots = response["snapshots"];
-                        for (let i = 0; i < shots.length; i++) {
-                            makeSnapshotCard(shots[i]["id"], shots[i]["title"], shots[i]["image_url"], shots[i]["is_public"]);
-                        }
-                        //list.forEach((snapshot) => makeSnapshotCard(snapshot));
-                    },
-                    error: function (xhr) {
-                        const msg = xhr.responseJSON?.error?.message || "스냅샷 목록을 불러오지 못했습니다.";
-                        alert(msg);
-                    }
-                }
-                )
-            }
-
-            function makeSnapshotCard(id, title, image_url, is_public) {
-                const checked = is_public ? "checked" : "";
-
-                let tempHtml =
-                    ` <li class="board-card" data-snapshot-id="${id}">
-                        <div class="board-thumb board-thumb-clickable" data-image-url="${image_url}"><img src="${image_url}"></div>
-                        <div class="board-footer">
-                            <div class="board-name">${title || "제목 없음"}</div>
-                            <div class="board-footer-actions">
-                                <div class="board-public">
-                                    <span>공개여부</span>
-                                    <input type="checkbox" class="public-toggle" data-id="${id}" ${checked}>
-                                </div>
-                                <button type="button" class="board-delete-btn" data-snapshot-id="${id}" title="삭제">삭제</button>
-                            </div>
-                        </div>
-                    </li>`;
-
-                $("#card-list").append(tempHtml);
-            }
-
-            // 이벤트 위임: 동적으로 생성된 체크박스 작동
+            // 이벤트 위임: SSR로 렌더된 체크박스 작동
             $(document).on("change", ".public-toggle", function () {
                 const snapshotId = $(this).data("id");
                 const isPublic = $(this).is(":checked");
