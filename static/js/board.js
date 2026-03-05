@@ -5,8 +5,14 @@ $(document).ready(function () {
     console.error('public_id가 없습니다.');
     return;
   }
-  $('#login-required-goto').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
-  $('#btn-login').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
+  $('#login-required-goto').attr(
+    'href',
+    '/?next=' + encodeURIComponent('/boards/' + publicId),
+  );
+  $('#btn-login').attr(
+    'href',
+    '/?next=' + encodeURIComponent('/boards/' + publicId),
+  );
 
   let board = null;
   let notes = [];
@@ -131,7 +137,11 @@ $(document).ready(function () {
     } else {
       $('#btn-login').hide();
     }
-    const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+    const isBoardOwner = !!(
+      currentUserId &&
+      board &&
+      String(board.owner_user_id) === String(currentUserId)
+    );
     if (isBoardOwner) {
       $('#board-title').css('cursor', 'pointer');
     } else {
@@ -147,7 +157,11 @@ $(document).ready(function () {
   function closeBoardTitleModal() {
     $('#board-title-modal').removeClass('is-open').attr('aria-hidden', 'true');
   }
-  $(document).on('click', '#board-title-modal .note-modal-backdrop[data-close="true"]', closeBoardTitleModal);
+  $(document).on(
+    'click',
+    '#board-title-modal .note-modal-backdrop[data-close="true"]',
+    closeBoardTitleModal,
+  );
   $('#board-title-cancel').on('click', closeBoardTitleModal);
   $('#board-title-save').on('click', function () {
     const title = String($('#board-title-input').val() || '').trim();
@@ -158,9 +172,18 @@ $(document).ready(function () {
       body: JSON.stringify({ title: title || '' }),
     })
       .then(async (res) => {
-        if (res.status === 401) { showLoginRequiredModal(); return null; }
-        if (res.status === 403) { alert('보드 생성자만 제목을 수정할 수 있습니다.'); return null; }
-        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.error?.message || '수정 실패'); }
+        if (res.status === 401) {
+          showLoginRequiredModal();
+          return null;
+        }
+        if (res.status === 403) {
+          alert('보드 생성자만 제목을 수정할 수 있습니다.');
+          return null;
+        }
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d?.error?.message || '수정 실패');
+        }
         return res.json();
       })
       .then((data) => {
@@ -176,7 +199,11 @@ $(document).ready(function () {
   });
 
   $(document).on('click', '#board-title', function () {
-    const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+    const isBoardOwner = !!(
+      currentUserId &&
+      board &&
+      String(board.owner_user_id) === String(currentUserId)
+    );
     if (isBoardOwner) openBoardTitleModal();
   });
 
@@ -189,13 +216,6 @@ $(document).ready(function () {
 
     note.x = x;
     note.y = y;
-
-    socket.emit('move_note', {
-      public_id: publicId,
-      note_id: noteId,
-      x: x,
-      y: y,
-    });
 
     fetch(`/api/boards/${publicId}/notes/${noteId}`, {
       method: 'PATCH',
@@ -210,6 +230,9 @@ $(document).ready(function () {
       .then(async (res) => {
         if (res.status === 401) {
           showLoginRequiredModal();
+          note.x = previousX;
+          note.y = previousY;
+          renderNotes();
           return null;
         }
         if (res.status === 403 || res.status === 409) {
@@ -230,9 +253,19 @@ $(document).ready(function () {
           if (idx >= 0) notes[idx] = updated;
           renderNotes();
           renderWingbarMyNotes();
+
+          socket.emit('move_note', {
+            public_id: publicId,
+            note_id: noteId,
+            x: x,
+            y: y,
+          });
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        note.x = previousX;
+        note.y = previousY;
+      });
   }
 
   function renderNotes() {
@@ -356,9 +389,15 @@ $(document).ready(function () {
     $('#login-required-modal').addClass('is-open').attr('aria-hidden', 'false');
   }
   function closeLoginRequiredModal() {
-    $('#login-required-modal').removeClass('is-open').attr('aria-hidden', 'true');
+    $('#login-required-modal')
+      .removeClass('is-open')
+      .attr('aria-hidden', 'true');
   }
-  $(document).on('click', '#login-required-modal .note-modal-backdrop[data-close="true"]', closeLoginRequiredModal);
+  $(document).on(
+    'click',
+    '#login-required-modal .note-modal-backdrop[data-close="true"]',
+    closeLoginRequiredModal,
+  );
   $('#login-required-close').on('click', closeLoginRequiredModal);
 
   function closeNoteModal() {
@@ -405,10 +444,20 @@ $(document).ready(function () {
           : null;
       };
       const isKeyboardTrigger = e.detail === 0;
-      const fromClick = !isKeyboardTrigger ? getPosFromCoords(e.clientX, e.clientY) : null;
-      const fromLastMouse = lastMousePos ? getPosFromCoords(lastMousePos.clientX, lastMousePos.clientY) : null;
-      const centerX = Math.max(20, Math.floor(window.innerWidth / 2 - rect.left - 80));
-      const centerY = Math.max(20, Math.floor(window.innerHeight / 2 - rect.top - 50));
+      const fromClick = !isKeyboardTrigger
+        ? getPosFromCoords(e.clientX, e.clientY)
+        : null;
+      const fromLastMouse = lastMousePos
+        ? getPosFromCoords(lastMousePos.clientX, lastMousePos.clientY)
+        : null;
+      const centerX = Math.max(
+        20,
+        Math.floor(window.innerWidth / 2 - rect.left - 80),
+      );
+      const centerY = Math.max(
+        20,
+        Math.floor(window.innerHeight / 2 - rect.top - 50),
+      );
       if (fromClick) {
         x = fromClick.x;
         y = fromClick.y;
