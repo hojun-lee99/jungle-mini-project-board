@@ -6,16 +6,10 @@
 }
 
 .note-text {
-    font-family: 'BoardHandFont', sans-serif !important;
     line-height: 1.4;
     word-break: break-all;
 }
 
-#note-detail-text, 
-#note-detail-edit-textarea,
-#note-modal-text {
-    font-family: 'BoardHandFont', sans-serif;
-}
 
 .bg-logo {
 position: relative;
@@ -202,6 +196,9 @@ min-height: 0;
 display: flex;
 flex-direction: column;
 }
+.wingbar-section-compact {
+flex: 0 0 auto;
+}
 .wingbar-section-title {
 flex-shrink: 0;
 margin: 0 0 12px;
@@ -237,6 +234,68 @@ margin-bottom: 0;
 margin: 0;
 font-size: 13px;
 color: #9ca3af;
+}
+.font-setting-row {
+margin-bottom: 14px;
+}
+.font-setting-row:last-child {
+margin-bottom: 0;
+}
+.font-setting-label {
+display: block;
+font-size: 13px;
+color: #374151;
+margin-bottom: 6px;
+}
+.font-size-control {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.font-size-slider {
+flex: 1;
+min-width: 0;
+height: 6px;
+-webkit-appearance: none;
+appearance: none;
+background: #e5e7eb;
+border-radius: 3px;
+}
+.font-size-slider::-webkit-slider-thumb {
+-webkit-appearance: none;
+appearance: none;
+width: 16px;
+height: 16px;
+background: #05D182;
+border-radius: 50%;
+cursor: pointer;
+}
+.font-size-slider::-moz-range-thumb {
+width: 16px;
+height: 16px;
+background: #05D182;
+border-radius: 50%;
+cursor: pointer;
+border: none;
+}
+.font-size-value {
+font-size: 12px;
+color: #6b7280;
+min-width: 36px;
+}
+.font-family-select {
+width: 100%;
+padding: 8px 12px;
+font-size: 14px;
+border: 1px solid #e5e7eb;
+border-radius: 6px;
+background: white;
+color: #374151;
+cursor: pointer;
+}
+.font-family-select:focus {
+outline: none;
+border-color: #05D182;
 }
 /* 이미지 모달 */
 .image-modal {

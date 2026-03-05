@@ -14,6 +14,26 @@ $(document).ready(function () {
   let imageInsertMode = false;
   let pendingImagePosition = null;
 
+  const FONT_STORAGE_KEY = 'board_note_font';
+  function getNoteFontSettings() {
+    try {
+      const s = localStorage.getItem(FONT_STORAGE_KEY);
+      if (s) {
+        const parsed = JSON.parse(s);
+        return {
+          size: Math.min(24, Math.max(12, parseInt(parsed.size, 10) || 16)),
+          family: parsed.family || 'BoardHandFont, sans-serif',
+        };
+      }
+    } catch (_) {}
+    return { size: 16, family: 'BoardHandFont, sans-serif' };
+  }
+  function setNoteFontSettings(size, family) {
+    try {
+      localStorage.setItem(FONT_STORAGE_KEY, JSON.stringify({ size: size, family: family }));
+    } catch (_) {}
+  }
+
   const socket = io('/', {
     withCredentials: true,
   });
@@ -369,9 +389,11 @@ $(document).ready(function () {
           }),
         );
       }
+      const font = getNoteFontSettings();
       $body.append(
         $('<div>')
           .addClass('note-text')
+          .css({ fontSize: font.size + 'px', fontFamily: font.family })
           .text(note.text || ''),
       );
       $el.append($body);
@@ -477,6 +499,35 @@ $(document).ready(function () {
     closeWingbar();
     highlightNote(null);
   });
+
+  function applyFontToModals() {
+    const font = getNoteFontSettings();
+    $('#note-modal-text, #note-detail-text, #note-detail-edit-textarea').css({
+      fontSize: font.size + 'px',
+      fontFamily: font.family,
+    });
+  }
+
+  (function initFontControls() {
+    const font = getNoteFontSettings();
+    $('#note-font-size').val(font.size);
+    $('#note-font-size-value').text(font.size + 'px');
+    $('#note-font-family').val(font.family);
+    applyFontToModals();
+    $('#note-font-size').on('input', function () {
+      const size = parseInt($(this).val(), 10);
+      $('#note-font-size-value').text(size + 'px');
+      setNoteFontSettings(size, getNoteFontSettings().family);
+      renderNotes();
+      applyFontToModals();
+    });
+    $('#note-font-family').on('change', function () {
+      const family = $(this).val();
+      setNoteFontSettings(getNoteFontSettings().size, family);
+      renderNotes();
+      applyFontToModals();
+    });
+  })();
 
   $(document).on('click', '#wingbar-my-notes .wingbar-note-item', function () {
     const noteId = $(this).attr('data-note-id');
@@ -677,6 +728,7 @@ $(document).ready(function () {
 
   function openNoteModal(atPosition) {
     pendingNotePosition = atPosition; // {x,y} 또는 null
+    applyFontToModals();
     $('#note-modal').addClass('is-open').attr('aria-hidden', 'false');
     $('#note-modal-text').val('').focus();
     updateCharCount($('#note-modal-text'), $('#note-modal-char-count'));
@@ -845,6 +897,7 @@ $(document).ready(function () {
   function openNoteDetailModal(noteId) {
     const note = notes.find((n) => n.id === noteId);
     if (!note) return;
+    applyFontToModals();
     detailModalNoteId = noteId;
     highlightNote(noteId);
     const $noteEl = $container.find('.note[data-note-id="' + noteId + '"]');

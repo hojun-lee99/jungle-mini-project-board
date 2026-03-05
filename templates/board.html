@@ -103,6 +103,27 @@
           <span class="wingbar-item-icon">🗑</span>
           <span>보드 삭제</span>
         </button>
+        <div class="wingbar-section wingbar-section-compact">
+          <h3 class="wingbar-section-title">글자 설정</h3>
+          <div class="font-setting-row">
+            <label for="note-font-size" class="font-setting-label">글자 크기</label>
+            <div class="font-size-control">
+              <input type="range" id="note-font-size" min="12" max="24" value="16" class="font-size-slider" />
+              <span id="note-font-size-value" class="font-size-value">16px</span>
+            </div>
+          </div>
+          <div class="font-setting-row">
+            <label for="note-font-family" class="font-setting-label">글자 폰트</label>
+            <select id="note-font-family" class="font-family-select">
+              <option value="BoardHandFont, sans-serif">손글씨</option>
+              <option value="&quot;Malgun Gothic&quot;, sans-serif">맑은 고딕</option>
+              <option value="Dotum, sans-serif">돋움</option>
+              <option value="Batang, serif">바탕체</option>
+              <option value="Gulim, sans-serif">굴림</option>
+              <option value="system-ui, sans-serif">시스템 기본</option>
+            </select>
+          </div>
+        </div>
         <div class="wingbar-section">
           <h3 class="wingbar-section-title">내가 쓴 메모</h3>
           <ul class="wingbar-note-list" id="wingbar-my-notes"></ul>
