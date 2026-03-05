@@ -1,13 +1,15 @@
-from flask import Flask, make_response, render_template, jsonify, request
+from flask import Flask, make_response, render_template, jsonify, request, redirect
 from flask_cors import CORS
 from config import Config
 from services import register_user, login_user
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
+    get_jwt_identity,
     jwt_required,
     set_access_cookies,
     unset_jwt_cookies,
+    verify_jwt_in_request,
 )
 from datetime import timedelta
 from pymongo import MongoClient
@@ -38,7 +40,19 @@ app.register_blueprint(boards_bp)
 
 @app.route('/')
 def home():
+    try:
+        verify_jwt_in_request(optional=True)
+        if get_jwt_identity():
+            return redirect('/main')
+    except Exception:
+        pass
     return render_template('login.html')
+
+
+@app.route('/register')
+def register_page():
+    """회원가입 페이지."""
+    return render_template('register.html')
 
 
 @app.route('/main')

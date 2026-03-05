@@ -5,6 +5,8 @@ $(document).ready(function () {
     console.error('public_id가 없습니다.');
     return;
   }
+  $('#login-required-goto').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
+  $('#btn-login').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
 
   let board = null;
   let notes = [];
@@ -75,7 +77,59 @@ $(document).ready(function () {
 
   function renderBoard() {
     $('#board-title').text(board?.title || '보드 제목');
+    if (!currentUserId) {
+      $('#btn-login').show();
+    } else {
+      $('#btn-login').hide();
+    }
+    const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+    if (isBoardOwner) {
+      $('#board-title').css('cursor', 'pointer');
+    } else {
+      $('#board-title').css('cursor', 'default');
+    }
   }
+
+  function openBoardTitleModal() {
+    $('#board-title-input').val(board?.title || '');
+    $('#board-title-modal').addClass('is-open').attr('aria-hidden', 'false');
+    setTimeout(() => $('#board-title-input').focus(), 100);
+  }
+  function closeBoardTitleModal() {
+    $('#board-title-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $(document).on('click', '#board-title-modal .note-modal-backdrop[data-close="true"]', closeBoardTitleModal);
+  $('#board-title-cancel').on('click', closeBoardTitleModal);
+  $('#board-title-save').on('click', function () {
+    const title = String($('#board-title-input').val() || '').trim();
+    fetch(`/api/boards/${publicId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title || '' }),
+    })
+      .then(async (res) => {
+        if (res.status === 401) { showLoginRequiredModal(); return null; }
+        if (res.status === 403) { alert('보드 생성자만 제목을 수정할 수 있습니다.'); return null; }
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d?.error?.message || '수정 실패'); }
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.title !== undefined) {
+          board = board || {};
+          board.title = data.title;
+          $('#board-title').text(data.title || '보드 제목');
+          closeBoardTitleModal();
+          alert('보드 제목이 저장되었습니다.');
+        }
+      })
+      .catch((err) => alert(err.message));
+  });
+
+  $(document).on('click', '#board-title', function () {
+    const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+    if (isBoardOwner) openBoardTitleModal();
+  });
 
   function updateNotePosition(noteId, x, y, version) {
     const note = notes.find((n) => n.id === noteId);
@@ -88,7 +142,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (res.status === 403 || res.status === 409) {
@@ -152,7 +206,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (!res.ok) {
@@ -212,7 +266,18 @@ $(document).ready(function () {
     openNoteDetailModal(noteId);
   });
 
-  let pendingNotePosition = null; // 더블클릭 시 생성 위치 저장 (null이면 + 버튼, center 사용)
+  let pendingNotePosition = null; // 더블클릭 시 생성 위치 저장 (null이면 + 버튼 경로)
+  let lastMousePos = null; // 마지막 마우스 위치 (키보드로 추가 시 폴백용)
+
+  function showLoginRequiredModal() {
+    $('#login-required-modal').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeLoginRequiredModal() {
+    $('#login-required-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $(document).on('click', '#login-required-modal .note-modal-backdrop[data-close="true"]', closeLoginRequiredModal);
+  $('#login-required-close').on('click', closeLoginRequiredModal);
+
   function closeNoteModal() {
     $('#note-modal').removeClass('is-open').attr('aria-hidden', 'true');
     pendingNotePosition = null;
@@ -224,13 +289,17 @@ $(document).ready(function () {
     $('#note-modal-text').val('').focus();
   }
 
+  $(document).on('mousemove', function (e) {
+    lastMousePos = { clientX: e.clientX, clientY: e.clientY };
+  });
+
   $('#btn-add-note').on('click', function () {
     openNoteModal(null);
   });
   $(document).on('click', '.note-modal-backdrop[data-close="true"]', closeNoteModal);
   $('#note-modal-cancel').on('click', closeNoteModal);
 
-  $(document).on('click', '#note-modal-confirm', function () {
+  $(document).on('click', '#note-modal-confirm', function (e) {
     const text = String($('#note-modal-text').val() || '').trim() || '새 메모';
     const pos = pendingNotePosition;
     closeNoteModal();
@@ -240,8 +309,29 @@ $(document).ready(function () {
       x = Math.max(20, pos.x);
       y = Math.max(20, pos.y);
     } else {
-      x = Math.max(20, Math.floor(window.innerWidth / 2 - rect.left - 80));
-      y = Math.max(20, Math.floor(window.innerHeight / 2 - rect.top - 50));
+      const getPosFromCoords = (cx, cy) => {
+        if (cx === 0 && cy === 0) return null;
+        const mx = cx - rect.left;
+        const my = cy - rect.top;
+        return mx >= 0 && mx <= rect.width && my >= 0 && my <= rect.height
+          ? { x: Math.max(20, mx), y: Math.max(20, my) }
+          : null;
+      };
+      const isKeyboardTrigger = e.detail === 0;
+      const fromClick = !isKeyboardTrigger ? getPosFromCoords(e.clientX, e.clientY) : null;
+      const fromLastMouse = lastMousePos ? getPosFromCoords(lastMousePos.clientX, lastMousePos.clientY) : null;
+      const centerX = Math.max(20, Math.floor(window.innerWidth / 2 - rect.left - 80));
+      const centerY = Math.max(20, Math.floor(window.innerHeight / 2 - rect.top - 50));
+      if (fromClick) {
+        x = fromClick.x;
+        y = fromClick.y;
+      } else if (fromLastMouse) {
+        x = fromLastMouse.x;
+        y = fromLastMouse.y;
+      } else {
+        x = centerX;
+        y = centerY;
+      }
     }
     createNote(x, y, text);
   });
@@ -314,6 +404,7 @@ $(document).ready(function () {
     const note = notes.find((n) => n.id === noteId);
     if (!note) return;
     detailModalNoteId = noteId;
+    highlightNote(noteId);
     const $noteEl = $container.find('.note[data-note-id="' + noteId + '"]');
     if ($noteEl.length) {
       detailModalOriginalZ = $noteEl.css('z-index');
@@ -346,11 +437,21 @@ $(document).ready(function () {
     }
     detailModalNoteId = null;
     detailModalOriginalZ = null;
+    highlightNote(null);
     $('#note-detail-modal').removeClass('is-open').attr('aria-hidden', 'true');
   }
 
   $(document).on('click', '.note-detail-backdrop[data-close="true"]', closeNoteDetailModal);
   $('#note-detail-close').on('click', closeNoteDetailModal);
+
+  $(document).on('keydown', function (e) {
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    if (!$('#note-detail-modal').hasClass('is-open')) return;
+    if ($('#note-detail-edit-view').is(':visible')) return;
+    if (!$('#note-detail-delete').is(':visible')) return;
+    e.preventDefault();
+    $('#note-detail-delete').trigger('click');
+  });
 
   $('#note-detail-edit').on('click', function () {
     const note = notes.find((n) => n.id === detailModalNoteId);
@@ -377,7 +478,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (res.status === 403 || res.status === 409) {
@@ -409,7 +510,7 @@ $(document).ready(function () {
     fetch(`/api/boards/${publicId}/notes/${noteId}`, { method: 'DELETE', credentials: 'include' })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (res.status === 403 || res.status === 404) {
@@ -525,7 +626,7 @@ $(document).ready(function () {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          alert('로그인이 필요합니다.');
+          showLoginRequiredModal();
           return null;
         }
         if (!res.ok) {

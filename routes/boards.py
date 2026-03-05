@@ -192,14 +192,15 @@ def get_board(public_id: str):
 
 
 # ---------------------------------------------------------------------------
-# PATCH /api/boards/<public_id> - public_id 변경
+# PATCH /api/boards/<public_id> - public_id 또는 title 변경
 # ---------------------------------------------------------------------------
 @boards_bp.route("/<public_id>", methods=["PATCH"])
 @jwt_required(optional=True)
 def update_board(public_id: str):
     """
-    보드 public_id 변경 API
-    - 인증: 필수 (보드 생성자만)
+    보드 수정 API
+    - public_id: 보드 링크 변경 (보드 생성자만)
+    - title: 보드 제목 변경 (보드 생성자만)
     """
     user_id = _get_current_user_id()
     if not user_id:
@@ -213,10 +214,7 @@ def update_board(public_id: str):
 
     data = request.get_json(silent=True) or {}
     new_public_id = data.get("public_id")
-    if not new_public_id:
-        return jsonify({
-            "error": {"code": "VALIDATION_ERROR", "message": "public_id가 필요합니다.", "details": {}}
-        }), 422
+    new_title = data.get("title")
 
     boards = db["boards"]
     board = boards.find_one({"public_id": public_id})
@@ -230,14 +228,22 @@ def update_board(public_id: str):
             "error": {"code": "FORBIDDEN", "message": "보드 생성자만 수정할 수 있습니다.", "details": {}}
         }), 403
 
-    boards.update_one(
-        {"_id": board["_id"]},
-        {"$set": {"public_id": new_public_id, "updated_at": utc_now()}}
-    )
+    if new_title is not None:
+        boards.update_one(
+            {"_id": board["_id"]},
+            {"$set": {"title": str(new_title).strip() or "", "updated_at": utc_now()}}
+        )
+        board["title"] = str(new_title).strip() or ""
 
-    # TODO: board_invalidated WebSocket broadcast (기존 room)
+    if new_public_id:
+        boards.update_one(
+            {"_id": board["_id"]},
+            {"$set": {"public_id": new_public_id, "updated_at": utc_now()}}
+        )
+        board["public_id"] = new_public_id
 
-    return jsonify({"public_id": new_public_id}), 200
+    result = {"title": board.get("title", ""), "public_id": board.get("public_id")}
+    return jsonify(result), 200
 
 
 # ---------------------------------------------------------------------------
