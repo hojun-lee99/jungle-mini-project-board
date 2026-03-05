@@ -58,6 +58,23 @@
         user-select: text;
         -webkit-user-select: text;
         cursor: text;
+        max-height: 200px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.08) transparent;
+      }
+      .note-text::-webkit-scrollbar {
+        width: 2px;
+      }
+      .note-text::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .note-text::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 2px;
+      }
+      .note-text::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.03);
       }
       .note-body img {
         max-width: 100%;
@@ -361,6 +378,17 @@
         border-color: #05d182;
         box-shadow: 0 0 0 2px rgba(5, 209, 130, 0.2);
       }
+      .note-char-counter {
+        display: block;
+        text-align: right;
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 4px;
+        margin-bottom: 12px;
+      }
+      .note-char-counter.at-limit {
+        color: #ef4444;
+      }
       .note-modal-actions {
         display: flex;
         justify-content: flex-end;
@@ -586,7 +614,8 @@
       <div class="note-modal-panel">
         <h3 class="note-modal-title">새 포스트잇</h3>
         <p class="note-modal-hint">내용을 입력하고 추가를 누르면 마우스 커서 위치에 포스트잇이 생성됩니다.</p>
-        <textarea id="note-modal-text" class="note-modal-textarea" placeholder="메모 내용을 입력하세요..." rows="4"></textarea>
+        <textarea id="note-modal-text" class="note-modal-textarea" placeholder="메모 내용을 입력하세요 (최대 500자)" rows="4" maxlength="500" data-max="500"></textarea>
+        <span id="note-modal-char-count" class="note-char-counter">0/500</span>
         <div class="note-modal-actions">
           <button
             type="button"
@@ -648,8 +677,11 @@
           <textarea
             id="note-detail-edit-textarea"
             class="note-detail-edit-textarea"
-            placeholder="메모 내용"
+            placeholder="메모 내용 (최대 500자)"
+            maxlength="500"
+            data-max="500"
           ></textarea>
+          <span id="note-detail-char-count" class="note-char-counter">0/500</span>
           <div class="note-detail-actions">
             <button
               type="button"
