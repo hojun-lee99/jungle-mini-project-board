@@ -6,6 +6,7 @@ $(document).ready(function () {
     return;
   }
   $('#login-required-goto').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
+  $('#btn-login').attr('href', '/?next=' + encodeURIComponent('/boards/' + publicId));
 
   let board = null;
   let notes = [];
@@ -76,6 +77,11 @@ $(document).ready(function () {
 
   function renderBoard() {
     $('#board-title').text(board?.title || '보드 제목');
+    if (!currentUserId) {
+      $('#btn-login').show();
+    } else {
+      $('#btn-login').hide();
+    }
   }
 
   function updateNotePosition(noteId, x, y, version) {
