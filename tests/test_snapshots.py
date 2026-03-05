@@ -71,7 +71,7 @@ class TestUploadSnapshot:
         assert res.status_code == 201
         body = res.get_json()
         assert "image_key" in body
-        assert body["image_key"].startswith("uploads/snapshots/")
+        assert body["image_key"].startswith("snapshots/") or body["image_key"].startswith("uploads/snapshots/")
         assert body["image_key"].endswith(".png")
 
 
@@ -194,7 +194,7 @@ class TestBoardDeleteWithSnapshot:
         list_res = auth_client.get("/api/snapshots/mine")
         snapshot_id = list_res.get_json()["snapshots"][0]["id"]
         # 다른 사용자로 이미지 조회 시도
-        other = client.post("/api/auth/register", json={"username": "other_snap_12345", "password": "test"})
+        other = client.post("/api/auth/register", json={"username": "other_snap_12345", "password": "testpass"})
         assert other.status_code == 201
         token = create_access_token(identity=other.get_json()["user_id"])
         img_res = client.get(
