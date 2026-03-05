@@ -51,6 +51,10 @@ $(document).ready(function () {
         if (noteObj) {
           noteObj.x = data.x;
           noteObj.y = data.y;
+
+          if (data.version !== undefined) {
+            noteObj.version = data.version;
+          }
         }
       }
     }
@@ -321,6 +325,7 @@ $(document).ready(function () {
             note_id: noteId,
             x: x,
             y: y,
+            version: updated.version
           });
         }
       })
