@@ -8,12 +8,14 @@
 - 포스트잇 생성 (POST /api/boards/<public_id>/notes)
 - 포스트잇 수정/이동 (PATCH /api/boards/<public_id>/notes/<note_id>)
 - 포스트잇 삭제 (DELETE /api/boards/<public_id>/notes/<note_id>)
+- 이미지 업로드 (POST /api/boards/<public_id>/images)
+- 이미지 조회 (GET /api/boards/<public_id>/images/<image_ref>)
 """
 import os
 import uuid
 
 from bson import ObjectId
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from pymongo import ReturnDocument
 from utils import utc_now
@@ -41,14 +43,14 @@ def _serialize_board(doc, include_created_at=False):
     return out
 
 
-def _serialize_note(doc, image_base_url=None):
+def _serialize_note(doc, public_id=None):
     """sticky_notes 컬렉션 문서를 API 응답 형식으로 변환."""
     if not doc:
         return None
-    image_key = doc.get("image_key")
+    image_key = doc.get("image_key")  # image_ref (filename)
     image_url = None
-    if image_key and image_base_url:
-        image_url = f"{image_base_url.rstrip('/')}/{image_key}"
+    if image_key and public_id:
+        image_url = f"/api/boards/{public_id}/images/{image_key}"
     return {
         "id": str(doc["_id"]),
         "owner_user_id": str(doc["owner_user_id"]),
@@ -179,11 +181,9 @@ def get_board(public_id: str):
         current_app.logger.exception("get_board notes: %s", e)
         return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "보드를 불러올 수 없습니다.", "details": {}}}), 500
 
-    image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
-
     payload = {
         "board": _serialize_board(board),
-        "notes": [_serialize_note(n, image_base_url) for n in notes_list],
+        "notes": [_serialize_note(n, public_id=public_id) for n in notes_list],
     }
     if current_user_id:
         payload["current_user_id"] = str(current_user_id)
@@ -383,8 +383,7 @@ def create_note(public_id: str):
     ins = sticky_notes.insert_one(note_doc)
     note_doc["_id"] = ins.inserted_id
 
-    image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
-    return jsonify(_serialize_note(note_doc, image_base_url)), 201
+    return jsonify(_serialize_note(note_doc, public_id=public_id)), 201
 
 
 # ---------------------------------------------------------------------------
@@ -440,18 +439,70 @@ def upload_image(public_id: str):
             "error": {"code": "VALIDATION_ERROR", "message": "이미지는 3MB 이하여야 합니다.", "details": {}}
         }), 400
 
+    board_id = board["_id"]
     base_dir = current_app.static_folder or "static"
-    upload_dir = os.path.join(base_dir, "uploads", "boards", public_id)
+    upload_dir = os.path.join(base_dir, "uploads", "boards", str(board_id))
     os.makedirs(upload_dir, exist_ok=True)
-    filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(upload_dir, filename)
+    image_ref = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(upload_dir, image_ref)
     file.save(filepath)
 
-    image_key = f"uploads/boards/{public_id}/{filename}"
-    base_url = request.url_root.rstrip("/")
-    image_url = f"{base_url}/static/{image_key}"
+    # image_key: 클라이언트가 POST /notes 시 사용. 노트에 저장.
+    # url: GET /api/boards/{public_id}/images/{image_ref} 형식
+    image_url = f"/api/boards/{public_id}/images/{image_ref}"
+    return jsonify({"image_key": image_ref, "url": image_url}), 201
 
-    return jsonify({"image_key": image_key, "url": image_url}), 201
+
+# ---------------------------------------------------------------------------
+# GET /api/boards/<public_id>/images/<image_ref> - 이미지 조회 (서빙)
+# ---------------------------------------------------------------------------
+IMAGE_EXT_TO_MIME = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+}
+
+
+@boards_bp.route("/<public_id>/images/<path:image_ref>", methods=["GET"])
+def get_image(public_id: str, image_ref: str):
+    """포스트잇에 첨부된 이미지 바이너리 반환. 인증 불필요."""
+    db = getattr(current_app, "db", None)
+    if db is None:
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+
+    boards = db["boards"]
+    sticky_notes = db["sticky_notes"]
+
+    board = boards.find_one({"public_id": public_id})
+    if not board:
+        return jsonify({
+            "error": {"code": "BOARD_NOT_FOUND", "message": "유효하지 않은 보드 링크입니다.", "details": {}}
+        }), 404
+
+    # 해당 보드 내 포스트잇 중 image_ref에 해당하는 이미지 검색
+    note = sticky_notes.find_one({"board_id": board["_id"], "image_key": image_ref})
+    if not note:
+        return jsonify({
+            "error": {"code": "IMAGE_NOT_FOUND", "message": "이미지를 찾을 수 없습니다.", "details": {}}
+        }), 404
+
+    base_dir = current_app.static_folder or "static"
+    # 신규: image_key=filename, 저장 경로 uploads/boards/{board_id}/{filename}
+    # 구버전: image_key=uploads/boards/{public_id}/{filename}
+    if "/" in image_ref:
+        filepath = os.path.join(base_dir, image_ref)
+    else:
+        filepath = os.path.join(base_dir, "uploads", "boards", str(board["_id"]), image_ref)
+    if not os.path.isfile(filepath):
+        return jsonify({
+            "error": {"code": "IMAGE_NOT_FOUND", "message": "이미지를 찾을 수 없습니다.", "details": {}}
+        }), 404
+
+    ext = os.path.splitext(image_ref)[1].lower()
+    mimetype = IMAGE_EXT_TO_MIME.get(ext, "application/octet-stream")
+
+    return send_file(filepath, mimetype=mimetype)
 
 
 # ---------------------------------------------------------------------------
@@ -558,8 +609,7 @@ def update_note(public_id: str, note_id: str):
         }), 409
 
     updated = sticky_notes.find_one({"_id": oid})
-    image_base_url = current_app.config.get("IMAGE_BASE_URL") or ""
-    return jsonify(_serialize_note(updated, image_base_url)), 200
+    return jsonify(_serialize_note(updated, public_id=public_id)), 200
 
 
 # ---------------------------------------------------------------------------
