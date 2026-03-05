@@ -9,7 +9,7 @@ $(document).ready(function() {
 
         e.preventDefault(); 
 
-        const username = $('#username').val();
+        const username = $('#id').val();
         const password = $('#password').val();
         const pwdConfirm = $('#password_confirm').val();
 
@@ -35,24 +35,8 @@ $(document).ready(function() {
             },
             error:function(xhr) 
             {
-                // console.log(xhr)
-                //alert(xhr.status);
-                //alert(thrownError);
-                // console.error("Response JSON:", xhr.responseJSON);
-
-                if (xhr.status === 400) {
-
-                    showError("이미 존재하는 이름입니다.");
-                }
-                else if(xhr.status === 422) {
-                
-                    //showError(xhr.responseJSON.error)
-                    showError("유효성 검사 실패");
-                                
-                    if (!checkValidate(username, password, pwdConfirm)) 
-                        return false; 
-                }
-
+                const serverErrorMessage = xhr.responseJSON?.error || "알 수 없는 에러가 발생했습니다.";
+                showError(serverErrorMessage);
             },
         });
     });
@@ -64,16 +48,16 @@ $(document).ready(function() {
     }
 
     function checkValidate(username, password, pwdConfirm){
-        if (password !== pwdConfirm) {
+        if(username.length < 2 || username.length > 20) {
+            showError("이름은 2자 이상 20자 이하로 입력해주세요.");
+            return false;
+        }
+        else if (password.length < 8 || password.length > 50) {
+            showError("비밀번호는 8자 이상 50자 이하로 입력해주세요.");
+            return false;
+        }
+        else if (password !== pwdConfirm) {
             showError("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
-            return false;
-        }
-        else if(username.length < 2 || username.length > 7) {
-            showError("이름은 2자 이상, 7자 이하로 입력해주세요.");
-            return false;
-        }
-        else if (password.length < 8) {
-            showError("비밀번호는 적어도 8자리보다 길어야 합니다.");
             return false;
         }
 
