@@ -70,3 +70,11 @@ def auth_client(client):
             return client.delete(url, **kwargs)
 
     return AuthClient()
+
+
+@pytest.fixture
+def board_with_public_id(auth_client):
+    """보드 생성 후 public_id 반환."""
+    res = auth_client.post("/api/boards", json={"title": "이미지테스트보드"})
+    assert res.status_code == 201
+    return res.get_json()["public_id"]
