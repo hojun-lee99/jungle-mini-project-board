@@ -21,7 +21,8 @@ def generate_presigned_url(object_name, expiration=3600):
             Fields={"acl": "public-read"},
             Conditions=[
                 {"acl": "public-read"},
-                ["starts-with", "$Content-Type", "image/"]
+                ["starts-with", "$Content-Type", "image/"],
+                ["content-length-range", 0, 3145728]
             ],
             ExpiresIn=expiration
         )
