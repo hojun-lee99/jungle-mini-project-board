@@ -30,7 +30,7 @@
       <div class="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 header-clickable shrink-0">
         <a href="#" id="btn-login" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition shadow-sm no-underline shrink-0 order-first" style="display:none; background-color:#05D182; color:white; text-decoration:none;" title="로그인">로그인</a>
         <button id="btn-add-note" class="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium transition shadow-sm shrink-0" title="새 포스트잇">+</button>
-        <button id="btn-share" class="hover:scale-110 transition transform">
+        <button id="btn-share" class="hover:scale-110 transition transform" title="링크 공유하기">
           <img
             src="{{ url_for('static', filename='icons/share.svg') }}"
             alt="공유"
@@ -50,7 +50,7 @@
           />
         </button>
 
-        <button id="btn-menu" class="hover:scale-110 transition transform">
+        <button id="btn-menu" class="hover:scale-110 transition transform" title="메뉴">
           <img
             src="{{ url_for('static', filename='icons/menu.svg') }}"
             alt="메뉴"
