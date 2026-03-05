@@ -1158,40 +1158,67 @@ $(document).ready(function () {
       alert('이미지 파일을 선택해 주세요.');
       return;
     }
+
+    const MAX_SIZE = 3 * 1024 * 1024;
+    if (input.files[0].size > MAX_SIZE) {
+      alert('파일 크기는 3MB를 초과할 수 없습니다. (현재: ' + (input.files[0].size / 1024 / 1024).toFixed(2) + 'MB)');
+      return;
+    }
+
     if (!pendingImagePosition) {
       closeImageModal();
       return;
     }
     const { x, y } = pendingImagePosition;
-    const formData = new FormData();
-    formData.append('file', input.files[0]);
+    const file = input.files[0];
 
-    fetch(`/api/boards/${publicId}/images`, {
+    fetch(`/api/boards/${publicId}/presigned-url`, {
       method: 'POST',
       credentials: 'include',
-      body: formData,
-    })
-      .then(async (res) => {
-        if (res.status === 401) {
-          showLoginRequiredModal();
-          return null;
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({filename: file.name})
+    }).then(async (res) => {
+      if (res.status === 401) {
+        showLoginRequiredModal();
+        return null;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error?.message || '업로드 URL 생성에 실패했습니다.');
+      }
+      return res.json()
+    }).then((data) => {
+      if (!data) return;
+
+      const presignedUrlData = data.presigned_url;
+      const imageKey = data.image_key;
+
+      const formData = new FormData();
+
+      Object.keys(presignedUrlData.fields).forEach((key) => {
+        formData.append(key, presignedUrlData.fields[key]);
+      });
+
+      formData.append('Content-Type', file.type)
+
+      formData.append('file', file);
+
+      return fetch(presignedUrlData.url, {
+        method: 'POST',
+        body: formData,
+      }).then((s3Res) => {
+        if (!s3Res.ok) {
+          throw new Error('S3 이미지 업로드에 실패했습니다.')
         }
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(
-            data?.error?.message || '이미지 업로드에 실패했습니다.',
-          );
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data) {
-          createNote(x, y, '', data.image_key);
+        createNote(x, y, '', imageKey);
           closeImageModal();
           imageInsertMode = false;
           $('#btn-add-image').removeClass('image-mode-active');
-        }
-      })
-      .catch((err) => alert(err.message));
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      alert(err.message);
+    })
   });
 });

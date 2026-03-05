@@ -21,6 +21,7 @@ import sockets
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
+app.config.from_object(Config)
 app.config["JWT_SECRET_KEY"] = Config.SECRET_KEY
 app.config["JWT_TOKEN_LOCATION"] = ['cookies']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
