@@ -509,6 +509,52 @@ $(document).ready(function () {
   });
   $(document).on('click', '#board-delete-modal .note-modal-backdrop[data-close="true"]', closeBoardDeleteModal);
   $('#board-delete-cancel').on('click', closeBoardDeleteModal);
+  const SNAPSHOT_MAX_BYTES = 5 * 1024 * 1024;
+
+  function reduceSnapshotToMaxSize(canvas, depth) {
+    depth = depth || 0;
+    if (depth > 5) return Promise.reject(new Error('이미지 축소에 실패했습니다.'));
+
+    function toBlobP(mime, quality) {
+      return new Promise(function (resolve, reject) {
+        canvas.toBlob(function (b) {
+          if (b) resolve(b);
+          else reject(new Error('Blob 생성 실패'));
+        }, mime, quality);
+      });
+    }
+
+    function tryFormat(mime, quality, ext) {
+      return toBlobP(mime, quality).then(function (blob) {
+        if (blob.size <= SNAPSHOT_MAX_BYTES) return { blob: blob, filename: 'snapshot.' + ext };
+        return null;
+      });
+    }
+
+    return tryFormat('image/png', undefined, 'png')
+      .then(function (ok) {
+        if (ok) return ok;
+        return tryFormat('image/jpeg', 0.9, 'jpg');
+      })
+      .then(function (ok) {
+        if (ok) return ok;
+        return tryFormat('image/jpeg', 0.75, 'jpg');
+      })
+      .then(function (ok) {
+        if (ok) return ok;
+        return tryFormat('image/jpeg', 0.55, 'jpg');
+      })
+      .then(function (ok) {
+        if (ok) return ok;
+        var scale = 0.8;
+        var c2 = document.createElement('canvas');
+        c2.width = Math.floor(canvas.width * scale);
+        c2.height = Math.floor(canvas.height * scale);
+        c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
+        return reduceSnapshotToMaxSize(c2, depth + 1);
+      });
+  }
+
   $('#board-delete-confirm').on('click', function () {
     const $btn = $('#board-delete-confirm');
     $btn.prop('disabled', true);
@@ -520,16 +566,13 @@ $(document).ready(function () {
     }
     html2canvas($container[0], { useCORS: true, allowTaint: true, scale: 1 })
       .then(function (canvas) {
-        return new Promise(function (resolve, reject) {
-          canvas.toBlob(function (blob) {
-            if (blob) resolve(blob);
-            else reject(new Error('Blob 생성 실패'));
-          }, 'image/png');
-        });
+        return reduceSnapshotToMaxSize(canvas);
       })
-      .then(function (blob) {
+      .then(function (_ref) {
+        var blob = _ref.blob;
+        var filename = _ref.filename;
         const formData = new FormData();
-        formData.append('file', blob, 'snapshot.png');
+        formData.append('file', blob, filename);
         formData.append('board_public_id', publicId);
         return fetch('/api/snapshots', {
           method: 'POST',
