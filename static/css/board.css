@@ -1,0 +1,458 @@
+@font-face {
+    font-family: 'BoardHandFont'; 
+    src: url('/static/fonts/kangWonGyoYook.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.note-text {
+    font-family: 'BoardHandFont', sans-serif !important;
+    line-height: 1.4;
+    word-break: break-all;
+}
+
+#note-detail-text, 
+#note-detail-edit-textarea,
+#note-modal-text {
+    font-family: 'BoardHandFont', sans-serif;
+}
+
+.bg-logo {
+position: relative;
+}
+.bg-logo::before {
+content: '';
+position: absolute;
+inset: 0;
+background-image: url('{{ url_for("static", filename="icons/Jungle_by KRAFTON_Logo_G.png") }}');
+background-repeat: no-repeat;
+background-position: center;
+background-size: 300px;
+opacity: 0.5;
+pointer-events: none;
+z-index: 0;
+}
+.note {
+position: absolute;
+width: fit-content;
+max-width: 320px;
+background: transparent;
+pointer-events: auto;
+z-index: 1;
+user-select: none;
+-webkit-user-select: none;
+box-shadow: none;
+border-radius: 4px;
+word-wrap: break-word;
+overflow-wrap: break-word;
+}
+.note-drag-handle {
+height: 20px;
+cursor: move;
+flex-shrink: 0;
+}
+.note-drag-handle::before {
+content: '⋮⋮';
+font-size: 12px;
+color: rgba(0, 0, 0, 0.3);
+padding-left: 4px;
+}
+.note-body {
+padding: 4px 12px 8px;
+overflow: visible;
+cursor: move;
+}
+.note-text {
+white-space: pre-wrap;
+word-break: break-word;
+user-select: text;
+-webkit-user-select: text;
+cursor: text;
+}
+.note-body img {
+max-width: 100%;
+max-height: 160px;
+object-fit: contain;
+}
+.note.is-highlighted {
+background: rgba(254, 240, 138, 0.6);
+box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.8);
+}
+.wingbar-note-item.is-active {
+background: #e5e7eb;
+}
+.header-pointer-through {
+pointer-events: none;
+}
+.header-pointer-through .header-clickable {
+pointer-events: auto;
+}
+.select-none {
+user-select: none;
+-webkit-user-select: none;
+}
+.wingbar-backdrop {
+position: fixed;
+inset: 0;
+background: rgba(0, 0, 0, 0.3);
+z-index: 200;
+opacity: 0;
+visibility: hidden;
+pointer-events: none;
+transition:
+    opacity 0.2s,
+    visibility 0.2s;
+}
+.wingbar-backdrop.is-open {
+opacity: 1;
+visibility: visible;
+pointer-events: auto;
+}
+.wingbar {
+position: fixed;
+top: 0;
+right: 0;
+bottom: 0;
+width: 280px;
+max-width: 90vw;
+background: white;
+box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+z-index: 201;
+transform: translateX(100%);
+transition: transform 0.25s ease-out;
+display: flex;
+flex-direction: column;
+}
+.wingbar.is-open {
+transform: translateX(0);
+}
+.wingbar-header {
+flex-shrink: 0;
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 20px 24px;
+border-bottom: 1px solid #e5e7eb;
+}
+.wingbar-title {
+font-size: 18px;
+font-weight: 600;
+color: #111827;
+}
+.wingbar-close {
+width: 32px;
+height: 32px;
+border: none;
+background: transparent;
+font-size: 24px;
+line-height: 1;
+color: #6b7280;
+cursor: pointer;
+border-radius: 6px;
+transition:
+    background 0.2s,
+    color 0.2s;
+}
+.wingbar-close:hover {
+background: #f3f4f6;
+color: #111827;
+}
+.wingbar-body {
+padding: 16px;
+flex: 1;
+min-height: 0;
+display: flex;
+flex-direction: column;
+}
+.wingbar-item {
+flex-shrink: 0;
+display: flex;
+align-items: center;
+gap: 12px;
+padding: 14px 16px;
+color: #374151;
+font-size: 15px;
+text-decoration: none;
+border-radius: 8px;
+transition:
+    background 0.2s,
+    color 0.2s;
+}
+.wingbar-item:hover {
+background: #f3f4f6;
+}
+.wingbar-item-btn {
+width: 100%;
+text-align: left;
+border: none;
+background: transparent;
+cursor: pointer;
+font: inherit;
+}
+.wingbar-item-icon {
+font-size: 18px;
+opacity: 0.8;
+}
+.wingbar-section {
+margin-top: 20px;
+padding-top: 16px;
+border-top: 1px solid #e5e7eb;
+flex: 1;
+min-height: 0;
+display: flex;
+flex-direction: column;
+}
+.wingbar-section-title {
+flex-shrink: 0;
+margin: 0 0 12px;
+font-size: 13px;
+font-weight: 600;
+color: #6b7280;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+}
+.wingbar-note-list {
+list-style: none;
+margin: 0;
+padding: 0;
+flex: 1;
+min-height: calc(100vh - 130px);
+overflow-y: auto;
+}
+.wingbar-note-item {
+padding: 10px 12px;
+margin-bottom: 4px;
+font-size: 13px;
+color: #374151;
+background: #f9fafb;
+border-radius: 6px;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.wingbar-note-item:last-child {
+margin-bottom: 0;
+}
+.wingbar-empty {
+margin: 0;
+font-size: 13px;
+color: #9ca3af;
+}
+/* 이미지 모달 */
+.image-modal {
+position: fixed;
+inset: 0;
+z-index: 300;
+display: flex;
+align-items: center;
+justify-content: center;
+opacity: 0;
+visibility: hidden;
+pointer-events: none;
+transition:
+    opacity 0.2s,
+    visibility 0.2s;
+}
+.image-modal.is-open {
+opacity: 1;
+visibility: visible;
+pointer-events: auto;
+}
+.image-modal-backdrop {
+position: absolute;
+inset: 0;
+background: rgba(0, 0, 0, 0.4);
+}
+.image-modal-panel {
+position: relative;
+width: 90%;
+max-width: 400px;
+padding: 24px;
+background: white;
+border-radius: 12px;
+box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+.image-modal-title {
+margin: 0 0 16px;
+font-size: 18px;
+font-weight: 600;
+color: #111827;
+}
+.image-modal-input {
+display: block;
+width: 100%;
+margin-bottom: 20px;
+padding: 10px;
+border: 1px solid #d1d5db;
+border-radius: 8px;
+}
+.image-modal-actions {
+display: flex;
+justify-content: flex-end;
+gap: 8px;
+}
+.image-modal-btn {
+padding: 10px 20px;
+border: none;
+border-radius: 8px;
+font-size: 14px;
+font-weight: 500;
+cursor: pointer;
+}
+.image-modal-btn-secondary {
+background: #f3f4f6;
+color: #374151;
+}
+.image-modal-btn-primary {
+background: #05d182;
+color: white;
+}
+#btn-add-image.image-mode-active {
+outline: 2px solid #05d182;
+outline-offset: 2px;
+}
+/* 새 포스트잇 모달 */
+.note-modal {
+position: fixed;
+inset: 0;
+z-index: 300;
+display: flex;
+align-items: center;
+justify-content: center;
+opacity: 0;
+visibility: hidden;
+pointer-events: none;
+transition:
+    opacity 0.2s,
+    visibility 0.2s;
+}
+.note-modal.is-open {
+opacity: 1;
+visibility: visible;
+pointer-events: auto;
+}
+.note-modal-backdrop {
+position: absolute;
+inset: 0;
+background: rgba(0, 0, 0, 0.4);
+}
+.note-modal-panel {
+position: relative;
+width: 90%;
+max-width: 420px;
+padding: 24px;
+background: white;
+border-radius: 12px;
+box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+.note-modal-title {
+margin: 0 0 8px;
+font-size: 18px;
+font-weight: 600;
+color: #111827;
+}
+.note-modal-hint {
+margin: 0 0 16px;
+font-size: 13px;
+color: #6b7280;
+}
+.note-modal-textarea {
+display: block;
+width: 100%;
+margin-bottom: 20px;
+padding: 12px;
+border: 1px solid #d1d5db;
+border-radius: 8px;
+font-size: 14px;
+resize: vertical;
+outline: none;
+}
+.note-modal-textarea:focus {
+border-color: #05d182;
+box-shadow: 0 0 0 2px rgba(5, 209, 130, 0.2);
+}
+.note-modal-actions {
+display: flex;
+justify-content: flex-end;
+gap: 8px;
+}
+.note-modal-btn {
+padding: 10px 20px;
+border: none;
+border-radius: 8px;
+font-size: 14px;
+font-weight: 500;
+cursor: pointer;
+}
+.note-modal-btn-secondary {
+background: #f3f4f6;
+color: #374151;
+}
+.note-modal-btn-primary {
+background: #05d182;
+color: white;
+}
+/* 포스트잇 상세 모달 (요구사항 4.4) */
+.note-detail-modal {
+position: fixed;
+inset: 0;
+z-index: 350;
+display: flex;
+align-items: center;
+justify-content: center;
+opacity: 0;
+visibility: hidden;
+pointer-events: none;
+transition:
+    opacity 0.2s,
+    visibility 0.2s;
+}
+.note-detail-modal.is-open {
+opacity: 1;
+visibility: visible;
+pointer-events: auto;
+}
+.note-detail-backdrop {
+position: absolute;
+inset: 0;
+background: rgba(0, 0, 0, 0.5);
+}
+.note-detail-panel {
+position: relative;
+width: 90%;
+max-width: 600px;
+max-height: 90vh;
+padding: 24px;
+background: white;
+border-radius: 12px;
+box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+overflow-y: auto;
+}
+.note-detail-text {
+margin: 0 0 16px;
+font-size: 15px;
+line-height: 1.6;
+white-space: pre-wrap;
+word-break: break-word;
+}
+.note-detail-image {
+max-width: 90vw;
+max-height: 80vh;
+display: block;
+margin: 0 auto 16px;
+}
+.note-detail-actions {
+display: flex;
+justify-content: flex-end;
+gap: 8px;
+margin-top: 16px;
+}
+.note-detail-edit-textarea {
+width: 100%;
+min-height: 120px;
+padding: 12px;
+border: 1px solid #d1d5db;
+border-radius: 8px;
+font-size: 14px;
+margin-bottom: 16px;
+}
