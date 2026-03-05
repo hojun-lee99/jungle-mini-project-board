@@ -386,7 +386,7 @@ def delete_snapshot(snapshot_id: str):
             "error": {"code": "FORBIDDEN", "message": "스냅샷 소유자만 삭제할 수 있습니다.", "details": {}}
         }), 403
 
-    s3_folder_path = f"snapshots/{snap['board_owner_id']}/"
+    s3_folder_path = f"snapshots/{snap['image_key']}/"
     delete_s3_prefix(s3_folder_path)
 
     db["snapshots"].delete_one({"_id": oid})
