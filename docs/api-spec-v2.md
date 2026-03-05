@@ -290,12 +290,28 @@
 | 인증 | 필수 (보드 생성자만)                                           |
 | 설명 | 보드 삭제. 최종 스냅샷을 이미지로 저장 후 보드 소유자에게 귀속 |
 
+**클라이언트 흐름**
+
+1. 삭제 확인 시점에 html2canvas 등으로 보드 영역 캡처
+2. `POST /api/snapshots`로 캡처 이미지 업로드 → `image_key` 수신
+3. 본 API 호출 시 Request Body에 `image_key` 포함
+
+**Request Body (선택)**
+
+```json
+{
+  "image_key": "string"
+}
+```
+
+- `image_key`: `POST /api/snapshots` 응답에서 받은 값. 생략 시 스냅샷 이미지 없이 레코드만 저장(`image_key=""`).
+
 **삭제 방식**: 보드·포스트잇은 **물리 삭제(hard delete)**. soft delete 미사용.
 
-**처리 순서**
+**서버 처리 순서**
 
-1. 스냅샷 이미지 파일 생성 (외부 스토리지/로컬 디스크)
-2. snapshots 컬렉션에 레코드 저장 (소유자 귀속)
+1. Request Body의 `image_key` 사용 (없으면 빈 문자열)
+2. snapshots 컬렉션에 레코드 저장 (소유자 귀속, `is_public: false`)
 3. `sticky_notes.deleteMany({ board_id })` → `boards.deleteOne({ _id })`. notes를 먼저 삭제한 뒤 boards 문서 삭제. (boards 삭제 시 note_count는 문서와 함께 사라지므로 별도 정리 불필요)
 4. 해당 보드 room에 `board_invalidated` broadcast (7.2 참고)
 
@@ -315,6 +331,12 @@
 ---
 
 ## 4. 포스트잇 API
+
+**이미지 필드**
+- `image_key`: 업로드 API(5.1) 응답의 `image_key`. 생성/수정 시 이미지 지정용. 응답에는 포함하지 않음.
+- `image_url`: 이미지 표시용 URL. `GET /api/boards/{public_id}/images/{image_ref}` 형식. public_id 변경 시 예전 URL은 404.
+
+---
 
 ### 4.1 포스트잇 생성
 
@@ -443,7 +465,7 @@
 
 ---
 
-## 5. 이미지 업로드 API
+## 5. 이미지 API
 
 ### 5.1 이미지 업로드 (포스트잇용)
 
@@ -470,6 +492,13 @@
 }
 ```
 
+- `image_key`: 서버 내부 저장 키. 클라이언트는 POST /notes 요청 시 이 값을 사용. 노출하지 않음.
+- `url`: 이미지 조회 URL. `GET /api/boards/{public_id}/images/{image_ref}` 형식. 이 URL을 사용해 이미지를 표시.
+
+**저장 구조**
+- 실제 파일은 `board_id`(MongoDB _id) 기준으로 저장. `public_id`가 변경되어도 기존 이미지 참조 유지.
+- 내부 경로 예: `uploads/boards/{board_id}/{filename}`. `board_id`는 클라이언트에 노출하지 않음.
+
 **에러**
 
 - `400`: 허용 확장자 아님, 3MB 초과, 이미지 아님
@@ -478,9 +507,78 @@
 
 ---
 
+### 5.2 이미지 조회 (서빙)
+
+**GET** `/api/boards/{public_id}/images/{image_ref}`
+
+| 구분 | 내용 |
+| ---- | ---- |
+| 인증 | 불필요 (보드 접근 가능한 누구나) |
+| 설명 | 포스트잇에 첨부된 이미지 바이너리 반환 |
+
+**파라미터**
+- `public_id`: 보드의 public_id
+- `image_ref`: 이미지 참조 식별자 (업로드 응답의 url에서 추출. 예측 불가능한 값)
+
+**성공 응답** `200 OK`
+- `Content-Type`: `image/jpeg` | `image/png` | `image/gif`
+- Body: 이미지 바이너리
+
+**처리**
+1. `public_id`로 보드 존재 확인
+2. 해당 보드 내 포스트잇 중 `image_ref`에 해당하는 이미지 검색
+3. 파일 반환
+
+**에러**
+- `404`: `BOARD_NOT_FOUND` 또는 `IMAGE_NOT_FOUND` — `public_id`가 변경된 경우 예전 URL은 404 (접근 차단)
+
+**보안**
+- URL에 `public_id` 포함. `public_id` 변경 시 예전 이미지 URL은 모두 404.
+- `board_id`는 URL에 포함하지 않음.
+
+---
+
 ## 6. 스냅샷 API
 
-### 6.1 내 스냅샷 목록
+### 6.1 스냅샷 이미지 업로드 (보드 삭제 직전용)
+
+**POST** `/api/snapshots`
+
+| 구분 | 내용 |
+| ---- | ---- |
+| 인증 | 필수 (보드 생성자만) |
+| 설명 | 보드 삭제 직전 클라이언트(html2canvas 등)가 캡처한 이미지 업로드. 반환된 `image_key`를 `DELETE /api/boards/{public_id}` 요청 본문에 포함 |
+
+**Content-Type** `multipart/form-data`
+
+**Request Body (Form)**
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| file | File | O | 캡처한 이미지 파일 (jpg, jpeg, png, gif, 최대 5MB) |
+| board_public_id | string | O | 대상 보드의 public_id |
+
+**성공 응답** `201 Created`
+
+```json
+{
+  "image_key": "string"
+}
+```
+
+- `image_key`: 저장된 이미지 경로. `uploads/snapshots/{owner_id}/{filename}` 형식. `DELETE /api/boards/{public_id}` 본문에 그대로 전달.
+
+**에러**
+
+- `400`: `board_public_id` 누락
+- `401`: 비인증
+- `403`: 보드 생성자 아님
+- `404`: `BOARD_NOT_FOUND`
+- `400`: file 누락, 허용 확장자 아님, 5MB 초과
+
+---
+
+### 6.2 내 스냅샷 목록
 
 **GET** `/api/snapshots/mine`
 
@@ -488,6 +586,8 @@
 | ---- | ------------------------------ |
 | 인증 | 필수                           |
 | 설명 | 나에게 귀속된 보드 스냅샷 목록 |
+
+※ `image_url`은 `GET /api/snapshots/{id}/image` 형식.
 
 **Query Parameters**
 
@@ -512,7 +612,33 @@
 
 ---
 
-### 6.2 스냅샷 공개 여부 토글
+### 6.3 스냅샷 이미지 조회
+
+**GET** `/api/snapshots/{snapshot_id}/image`
+
+| 구분 | 내용 |
+| ---- | ---- |
+| 인증 | 불필요 (단, 비공개 스냅샷은 소유자만) |
+| 설명 | 스냅샷 이미지 바이너리 반환 |
+
+**성공 응답** `200 OK`
+
+- `Content-Type`: `image/jpeg` | `image/png` | `image/gif`
+- Body: 이미지 바이너리
+
+**접근 제어**
+- 스냅샷이 `is_public: true` → 누구나 조회 가능
+- 스냅샷이 `is_public: false` → 소유자만 조회 가능
+
+**에러**
+
+- `404`: `SNAPSHOT_NOT_FOUND` — 스냅샷 없음
+- `403`: 비공개 스냅샷에 대한 비소유자 접근
+- `404`: `IMAGE_NOT_FOUND` — image_key 없음 또는 파일 미존재
+
+---
+
+### 6.4 스냅샷 공개 여부 토글
 
 **PATCH** `/api/snapshots/{snapshot_id}`
 
@@ -546,7 +672,7 @@
 
 ---
 
-### 6.3 공개 스냅샷 게시판
+### 6.5 공개 스냅샷 게시판
 
 **GET** `/api/snapshots/public`
 

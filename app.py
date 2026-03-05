@@ -1,17 +1,20 @@
-from flask import Flask, make_response, render_template, jsonify, request
+from flask import Flask, make_response, render_template, jsonify, request, redirect
 from flask_cors import CORS
 from config import Config
 from services import register_user, login_user
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
+    get_jwt_identity,
     jwt_required,
     set_access_cookies,
     unset_jwt_cookies,
+    verify_jwt_in_request,
 )
 from datetime import timedelta
 from pymongo import MongoClient
 from routes.boards import boards_bp
+from routes.snapshots import snapshots_bp
 from extensions import socketio
 import sockets
 
@@ -22,6 +25,7 @@ app.config["JWT_SECRET_KEY"] = Config.SECRET_KEY
 app.config["JWT_TOKEN_LOCATION"] = ['cookies']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # fetch/AJAX에서 X-CSRF-TOKEN 미전송 시 POST 401 방지
+app.config["IMAGE_BASE_URL"] = Config.IMAGE_BASE_URL
 jwt = JWTManager(app)
 # !!! 로컬 db 설정에 맞춰 수정 필요
 client = MongoClient("mongodb://localhost:27017")
@@ -32,13 +36,26 @@ socketio.init_app(app)
 
 # Blueprint 등록
 app.register_blueprint(boards_bp)
+app.register_blueprint(snapshots_bp)
 
 
 
 
 @app.route('/')
 def home():
+    try:
+        verify_jwt_in_request(optional=True)
+        if get_jwt_identity():
+            return redirect('/main')
+    except Exception:
+        pass
     return render_template('login.html')
+
+
+@app.route('/register')
+def register_page():
+    """회원가입 페이지."""
+    return render_template('register.html')
 
 
 @app.route('/main')
