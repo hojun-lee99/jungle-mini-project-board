@@ -34,13 +34,19 @@ def register_user(data):
   password = data.get('password')
 
   if not username or not password:
-    return {"error": "username과 password는 필수 입력값입니다."}, 422
+    return {"error": "아이디와 비밀번호는 필수 입력값입니다."}, 422
   
   if type(username) is not str or type(password) is not str:
     return {"error": "잘못된 데이터 형식입니다."}, 422
+
+  if len(username) < 2 or len(username) > 20:
+    return {"error": "아이디는 2자 이상 20자 이하로 입력해주세요."}, 422
+  
+  if len(password) < 8 or len(password) > 50:
+    return {"error": "비밀번호는 8자 이상 50자 이하로 입력해주세요."}, 422
   
   if db.users.find_one({"username": username}):
-    return {"error": "이미 존재하는 username입니다."}, 400
+    return {"error": "이미 존재하는 아이디입니다."}, 400
   
   user_id = str(uuid.uuid4())
   hased_pw = generate_password_hash(password)
