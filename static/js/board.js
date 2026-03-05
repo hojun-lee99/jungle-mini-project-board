@@ -433,6 +433,10 @@ $(document).ready(function () {
       $(this).removeClass('image-mode-active');
       closeImageModal();
     } else {
+      if (!currentUserId) {
+        showLoginRequiredModal();
+        return;
+      }
       openImageGuideModal();
     }
   });
@@ -549,6 +553,10 @@ $(document).ready(function () {
   });
 
   $('#btn-add-note').on('click', function () {
+    if (!currentUserId) {
+      showLoginRequiredModal();
+      return;
+    }
     openNoteModal(null);
   });
   $(document).on(
@@ -602,7 +610,11 @@ $(document).ready(function () {
   let lastBoardMousedown = { t: 0, x: 0, y: 0 };
 
   function tryOpenNoteModalAt(clientX, clientY) {
-    if (imageInsertMode) return;
+    if (!currentUserId) {
+      showLoginRequiredModal();
+      return false;
+    }
+    if (imageInsertMode) return false;
     const rect = $container[0].getBoundingClientRect();
     if (
       clientX < rect.left ||

@@ -454,20 +454,20 @@
   </head>
   <body class="bg-white w-full h-screen overflow-auto relative">
     <header
-      class="flex justify-between items-center p-6 md:px-10 md:py-8 fixed top-0 w-full z-50 header-pointer-through"
+      class="flex flex-wrap justify-between items-center gap-y-3 p-6 md:px-10 md:py-8 fixed top-0 w-full z-50 header-pointer-through bg-white border-b border-gray-100"
     >
       <h1
-        class="text-3xl md:text-4xl font-bold text-gray-500 tracking-wide cursor-pointer hover:text-gray-700 transition header-clickable"
+        class="text-3xl md:text-4xl font-bold text-gray-500 tracking-wide cursor-pointer hover:text-gray-700 transition header-clickable shrink-0"
         id="board-title"
       >
         보드 제목
       </h1>
 
-      <div class="flex items-center space-x-4 md:space-x-6 header-clickable">
-        <a href="#" id="btn-login" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition shadow-sm no-underline" style="display:none; background-color:#05D182; color:white; text-decoration:none;" title="로그인">로그인</a>
-        <button id="btn-add-note" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium transition shadow-sm" title="새 포스트잇">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 header-clickable shrink-0">
+        <a href="#" id="btn-login" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition shadow-sm no-underline shrink-0 order-first" style="display:none; background-color:#05D182; color:white; text-decoration:none;" title="로그인">로그인</a>
+        <button id="btn-add-note" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium transition shadow-sm shrink-0" title="새 포스트잇">
           <span>+</span>
-          <span class="hidden sm:inline">새 포스트잇</span>
+          <span class="hidden md:inline">새 포스트잇</span>
         </button>
         <button id="btn-share" class="hover:scale-110 transition transform">
           <img
@@ -504,7 +504,7 @@
     <!-- 보드를 전체 뷰포트에 고정해 헤더 영역과 동일하게 클릭을 받도록 함 -->
     <main
       id="board-container"
-      class="fixed inset-0 min-w-full min-h-full bg-logo z-10 pt-24"
+      class="fixed inset-0 min-w-full min-h-full bg-logo z-10 pt-28 md:pt-24"
       style="overflow: auto"
       data-public-id="{{ public_id }}"
     >
