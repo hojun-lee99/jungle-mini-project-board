@@ -21,6 +21,10 @@
             </button>
 
             <nav class="sidebar-nav">
+                <a class="nav-item" href="/main" id="main-boards-btn">
+                    <span class="material-symbols-outlined" id="mainBoardsIcon">dashboard</span>
+                    <span class="txt" id="mainBoardsText">내가 만든 보드</span>
+                </a>
                 <button class="nav-item" id="snapshot-btn">
                     <span class="material-symbols-outlined" id="myArchiveIcon">
                         archive
@@ -35,7 +39,6 @@
                         공개된 보드 기록
                     </span>
                 </button>
-                </a>
             </nav>
 
             <div class="sidebar-bottom">
@@ -118,6 +121,7 @@
 
                 btn.setAttribute("aria-expanded", String(!collapsed));
                 toggleIcon.textContent = collapsed ? "arrow_forward_ios" : "arrow_back_ios";
+                document.getElementById("mainBoardsText").textContent = collapsed ? "" : "내가 만든 보드";
                 myArchiveText.textContent = collapsed ? "" : "내 보드 기록";
                 publicArchiveText.textContent = collapsed ? "" : "공개된 보드 기록";
                 logoutText.textContent = collapsed ? "" : "로그아웃";
