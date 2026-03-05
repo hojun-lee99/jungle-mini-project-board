@@ -167,7 +167,8 @@ div {
   margin:0;
   padding:0;
   display:grid;
-  grid-template-columns: repeat(3, minmax(240px, 1fr));
+
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap:40px 80px;
 }
 
@@ -180,12 +181,16 @@ div {
   color:#111;
 }
 
+.board-card {
+    width: 100%;
+}
+
 .board-thumb{
   width:100%;
-  max-width:260px;
   aspect-ratio: 4 / 3;
   background:#d9d9d9;
   border-radius:8px;
+  overflow:hidden; 
 }
 
 .board-thumb img{
@@ -199,4 +204,12 @@ div {
 .board-name{
   font-size:16px;
   color:#333;
+}
+
+.board-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:10px;
+  padding: 10px;
 }
