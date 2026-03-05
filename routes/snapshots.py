@@ -98,6 +98,7 @@ def upload_snapshot():
     image_key = f"uploads/snapshots/{owner_id}/{filename}"
     return jsonify({"image_key": image_key}), 201
 
+# *** Todo: 이하 내용은 스냅샷 게시판에 필요한 api 초안입니다. 필요시 수정해서 사용하세요. ***
 
 # ---------------------------------------------------------------------------
 # GET /api/snapshots/mine - 내 스냅샷 목록
@@ -175,6 +176,7 @@ def list_public():
 # GET /api/snapshots/<id>/image - 스냅샷 이미지 조회
 # ---------------------------------------------------------------------------
 @snapshots_bp.route("/<snapshot_id>/image", methods=["GET"])
+@jwt_required(optional=True)
 def get_snapshot_image(snapshot_id: str):
     """스냅샷 이미지 반환. 소유자 또는 공개된 경우만 허용."""
     db = getattr(current_app, "db", None)
