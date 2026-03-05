@@ -19,6 +19,7 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from pymongo import ReturnDocument
 from utils import utc_now
+from utils.s3_utiles import generate_presigned_url
 
 boards_bp = Blueprint("boards", __name__, url_prefix="/api/boards")
 
@@ -50,7 +51,7 @@ def _serialize_note(doc, public_id=None):
     image_key = doc.get("image_key")  # image_ref (filename)
     image_url = None
     if image_key and public_id:
-        image_url = f"/api/boards/{public_id}/images/{image_key}"
+        image_url = f"{current_app.config['IMAGE_BASE_URL']}/{image_key}"
     return {
         "id": str(doc["_id"]),
         "owner_user_id": str(doc["owner_user_id"]),
@@ -669,3 +670,31 @@ def delete_note(public_id: str, note_id: str):
     boards.update_one({"_id": board["_id"]}, {"$inc": {"note_count": -1}})
 
     return "", 204
+
+# ---------------------------------------------------------------------------
+# POST /api/boards/<public_id>/presigned-url - aws bucket presigned-url 발급
+# ---------------------------------------------------------------------------
+@boards_bp.route("/<public_id>/presigned-url", methods=["POST"])
+@jwt_required(optional=True)
+def get_upload_url(public_id: str):
+    user_id = _get_current_user_id()
+    if not user_id:
+        return jsonify({
+            "error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}
+        }), 401
+
+    data = request.get_json()
+    filename = data.get("filename")
+    ext = os.path.splitext(filename)[1].lower()
+
+    image_ref = f"boards/{public_id}/{uuid.uuid4().hex}{ext}"
+
+    presigned_data = generate_presigned_url(image_ref)
+    if not presigned_data:
+        return jsonify({"error": "URL 생성 실패"}), 500
+    
+    return jsonify({
+        "presigned_url": presigned_data,
+        "image_key": image_ref
+    }), 200
+    
