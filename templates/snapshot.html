@@ -160,6 +160,32 @@
                 $("#card-list").append(tempHtml);
             }
 
+            // 이벤트 위임: 동적으로 생성된 체크박스 작동
+            $(document).on("change", ".public-toggle", function () {
+                const snapshotId = $(this).data("id");
+                const isPublic = $(this).is(":checked");
+                // // UI 잠깐 잠금(연타 방지)
+                // $(this).prop("disabled", true);
+                $.ajax({
+                    type: "PATCH",
+                    url: `/api/snapshots/${snapshotId}`,
+                    contentType: "application/json",
+                    data: JSON.stringify({ is_public: isPublic }),
+                    success: function () {
+                        // 성공: 그대로 유지
+                    },
+                    error: function (xhr) {
+                        // 실패: 체크 상태 원복
+                        const msg = xhr.responseJSON?.error?.message || "공개 여부 변경에 실패했습니다.";
+                        alert(msg);
+                        $(`.public-toggle[data-id="${snapshotId}"]`).prop("checked", !isPublic);
+                    },
+                    complete: function () {
+                        $(`.public-toggle[data-id="${snapshotId}"]`).prop("disabled", false);
+                    }
+                });
+            });
+
             // 이미지 클릭 시 확대 보기
             $(document).on("click", ".board-thumb-clickable", function () {
                 const url = $(this).data("image-url");
