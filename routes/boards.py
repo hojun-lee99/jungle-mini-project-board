@@ -19,7 +19,7 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from pymongo import ReturnDocument
 from utils import utc_now
-from utils.s3_utils import generate_presigned_url
+from utils.s3_utils import generate_presigned_url, delete_s3_object
 
 boards_bp = Blueprint("boards", __name__, url_prefix="/api/boards")
 
@@ -665,6 +665,10 @@ def delete_note(public_id: str, note_id: str):
         return jsonify({
             "error": {"code": "FORBIDDEN", "message": "삭제 권한이 없습니다.", "details": {}}
         }), 403
+    
+    image_key = note.get("image_key")
+    if image_key:
+        delete_s3_object(image_key)
 
     sticky_notes.delete_one({"_id": oid, "board_id": board["_id"]})
     boards.update_one({"_id": board["_id"]}, {"$inc": {"note_count": -1}})

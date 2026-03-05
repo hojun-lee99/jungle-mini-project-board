@@ -30,3 +30,15 @@ def generate_presigned_url(object_name, expiration=3600):
         print(e)
         return None
     return response
+
+def delete_s3_object(object_key):
+    if not object_key:
+        return False
+    
+    s3_client = get_s3_client()
+    try:
+        s3_client.delete_object(Bucket=current_app.config.get('S3_BUCKET_NAME'), Key=object_key)
+        return True
+    except Exception as e:
+        current_app.logger.error(f"S3 이미지 삭제 실패: {e}")
+        return False
