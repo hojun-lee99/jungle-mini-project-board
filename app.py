@@ -14,6 +14,7 @@ from flask_jwt_extended import (
 from datetime import timedelta
 from pymongo import MongoClient
 from routes.boards import boards_bp
+from routes.snapshots import snapshots_bp
 from extensions import socketio
 import sockets
 
@@ -35,6 +36,7 @@ socketio.init_app(app)
 
 # Blueprint 등록
 app.register_blueprint(boards_bp)
+app.register_blueprint(snapshots_bp)
 
 
 
