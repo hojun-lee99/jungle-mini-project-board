@@ -56,52 +56,7 @@
         <main class="content">
             <h1>공개된 보드 기록</h1>
             <div class="content-body">
-                <ul class="board-grid">
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
+                <ul class="board-grid" id="card-list">
                 </ul>
             </div>
         </main>
@@ -144,6 +99,86 @@
             $("#home-btn").click(function () {
                 window.location.href = "/main";
             });
+
+            // 새로고침 할 때마다 공개 스냅샷 리스트 조회
+            $(document).ready(function () { showPublicSnapshots() });
+
+            function showPublicSnapshots() {
+                $.ajax({
+                    type: "GET",
+                    url: "/api/snapshots/public",
+                    success: function (response) {
+                        const shots = response["snapshots"] || [];
+                        $("#card-list").empty();
+
+                        for (let i = 0; i < shots.length; i++) {
+                            makePublicSnapshotCard(
+                                shots[i]["id"],
+                                shots[i]["title"],
+                                shots[i]["image_url"]
+                            );
+                        }
+
+                        if (shots.length === 0) {
+                            $("#card-list").append(`<li style="padding:16px;color:#666;">공개된 보드 기록이 없습니다.</li>`);
+                        }
+                    },
+                    error: function (xhr) {
+                        const msg = xhr.responseJSON?.error?.message || "공개 스냅샷 목록을 불러오지 못했습니다.";
+                        alert(msg);
+                    }
+                });
+            }
+
+            function makePublicSnapshotCard(id, _title, image_url) {
+                const title = (_title && String(_title).trim()) ? _title : "제목 없음";
+
+                const tempHtml = `
+      <li class="board-card">
+        <div class="board-thumb">
+          <img src="${image_url}" alt="public snapshot">
+        </div>
+        <div class="board-footer">
+          <div class="board-name">${title}</div>
+        </div>
+      </li>
+    `;
+                $("#card-list").append(tempHtml);
+            }
+
+            // function showPublicSnapshots() {
+            //     $.ajax({
+            //         type: "GET",
+            //         url: "/api/snapshots/public",
+            //         data: {},
+            //         success: function (response) {
+            //             console.log(response);
+            //             let shots = response["snapshots"];
+            //             for (let i = 0; i < shots.length; i++) {
+            //                 makePublicSnapshotCard(shots[i]["id"], shots[i]["title"], shots[i]["image_url"]);
+            //             }
+            //         },
+            //         error: function (xhr) {
+            //             const msg = xhr.responseJSON?.error?.message || "스냅샷 목록을 불러오지 못했습니다.";
+            //             alert(msg);
+            //         }
+            //     }
+            //     )
+            // }
+
+            // function makePublicSnapshotCard(id, title, image_url) {
+            //     const checked = is_public ? "checked" : "";
+
+            //     let tempHtml =
+            //         ` <li class="board-card">
+            //             <div class="board-thumb"><img src="${image_url}"></div>
+            //             <div class="board-footer">
+            //                 <div class="board-name">${title || "제목 없음"}</div>
+            //             </div>
+            //         </li>`;
+
+            //     $("#card-list").append(tempHtml);
+            // }
         </script>
 
 

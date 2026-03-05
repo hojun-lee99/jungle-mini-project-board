@@ -190,6 +190,7 @@ def list_public():
     def _serialize(doc):
         return {
             "id": str(doc["_id"]),
+            "title": doc.get("title", ""),  
             "image_url": f"/api/snapshots/{doc['_id']}/image",
             "owner_username": user_map.get(str(doc["board_owner_id"]), ""),
             "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
