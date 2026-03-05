@@ -404,6 +404,7 @@ $(document).ready(function () {
     const note = notes.find((n) => n.id === noteId);
     if (!note) return;
     detailModalNoteId = noteId;
+    highlightNote(noteId);
     const $noteEl = $container.find('.note[data-note-id="' + noteId + '"]');
     if ($noteEl.length) {
       detailModalOriginalZ = $noteEl.css('z-index');
@@ -436,11 +437,21 @@ $(document).ready(function () {
     }
     detailModalNoteId = null;
     detailModalOriginalZ = null;
+    highlightNote(null);
     $('#note-detail-modal').removeClass('is-open').attr('aria-hidden', 'true');
   }
 
   $(document).on('click', '.note-detail-backdrop[data-close="true"]', closeNoteDetailModal);
   $('#note-detail-close').on('click', closeNoteDetailModal);
+
+  $(document).on('keydown', function (e) {
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    if (!$('#note-detail-modal').hasClass('is-open')) return;
+    if ($('#note-detail-edit-view').is(':visible')) return;
+    if (!$('#note-detail-delete').is(':visible')) return;
+    e.preventDefault();
+    $('#note-detail-delete').trigger('click');
+  });
 
   $('#note-detail-edit').on('click', function () {
     const note = notes.find((n) => n.id === detailModalNoteId);
