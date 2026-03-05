@@ -19,7 +19,7 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from pymongo import ReturnDocument
 from utils import utc_now
-from utils.s3_utils import generate_presigned_url, delete_s3_object
+from utils.s3_utils import generate_presigned_url, delete_s3_object, delete_s3_prefix
 
 boards_bp = Blueprint("boards", __name__, url_prefix="/api/boards")
 
@@ -286,6 +286,10 @@ def delete_board(public_id: str):
         return jsonify({
             "error": {"code": "FORBIDDEN", "message": "보드 생성자만 삭제할 수 있습니다.", "details": {}}
         }), 403
+    
+    s3_folder_path = f"boards/{public_id}/"
+    print(s3_folder_path)
+    delete_s3_prefix(s3_folder_path)
 
     now = utc_now()
     board_id = board["_id"]

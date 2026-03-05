@@ -42,3 +42,26 @@ def delete_s3_object(object_key):
     except Exception as e:
         current_app.logger.error(f"S3 이미지 삭제 실패: {e}")
         return False
+
+def delete_s3_prefix(prefix):
+    if not prefix:
+        return False
+    
+    s3_client = get_s3_client()
+    bucket_name = current_app.config.get('S3_BUCKET_NAME')
+
+    try:
+        objects_to_delete = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+
+        if 'Contents' in objects_to_delete:
+            delete_keys = [{'Key': obj['Key']} for obj in objects_to_delete['Contents']]
+
+            s3_client.delete_objects(
+                Bucket=bucket_name,
+                Delete={'Objects': delete_keys}
+            )
+            current_app.logger.info(f"S3 경로 삭제 완료: {prefix}")
+        return True
+    except Exception as e:
+        current_app.logger.error(f"S3 경로 삭제 실패 ({prefix}): {e}")
+        return False
