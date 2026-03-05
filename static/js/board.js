@@ -51,10 +51,43 @@ $(document).ready(function () {
         if (noteObj) {
           noteObj.x = data.x;
           noteObj.y = data.y;
+
+          if (data.version !== undefined) {
+            noteObj.version = data.version;
+          }
         }
       }
     }
   });
+
+  socket.on('note_created', function (data) {
+    if (data && data.note) {
+      const exists = notes.find((n) => String(n.id) === String(data.note.id));
+
+      if (!exists) {
+        notes.push(data.note);
+        renderNotes();
+      }
+    }
+  })
+
+  socket.on('note_deleted', function (data) {
+    if (data && data.note_id) {
+      notes = notes.filter((n) => String(n.id) !== String(data.note_id))
+      renderNotes();
+    }
+  })
+
+  socket.on('note_updated', function (data) {
+    if (data && data.note) {
+      const idx = notes.findIndex((n) => String(n.id) === String(data.note.id));
+
+      if (idx !== -1) {
+        notes[idx] = data.note;
+        renderNotes();
+      }
+    }
+  })
 
   function loadBoard() {
     fetch(`/api/boards/${publicId}`, { credentials: 'include' })
@@ -292,6 +325,7 @@ $(document).ready(function () {
             note_id: noteId,
             x: x,
             y: y,
+            version: updated.version
           });
         }
       })
@@ -365,6 +399,11 @@ $(document).ready(function () {
           notes.push(note);
           renderNotes();
           renderWingbarMyNotes();
+
+          socket.emit('create_note', {
+            public_id: publicId,
+            note: note,
+          })
         }
       })
       .catch((err) => alert(err.message));
@@ -763,6 +802,11 @@ $(document).ready(function () {
           renderNotes();
           renderWingbarMyNotes();
           closeNoteDetailModal();
+
+          socket.emit('update_note', {
+            public_id: publicId,
+            note: updated
+          })
         }
       })
       .catch(() => {});
@@ -794,6 +838,11 @@ $(document).ready(function () {
           renderNotes();
           renderWingbarMyNotes();
           closeNoteDetailModal();
+
+          socket.emit('delete_note', {
+            public_id: publicId,
+            note_id: noteId,
+          })
         }
       })
       .catch(() => {});
