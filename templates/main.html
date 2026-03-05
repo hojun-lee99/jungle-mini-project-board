@@ -22,6 +22,10 @@
             </button>
 
             <nav class="sidebar-nav">
+                <a class="nav-item is-active" href="/main" id="main-boards-btn">
+                    <span class="material-symbols-outlined" id="mainBoardsIcon">dashboard</span>
+                    <span class="txt" id="mainBoardsText">내가 만든 보드</span>
+                </a>
                 <button class="nav-item" href="#" id="snapshot-btn">
                     <span class="material-symbols-outlined" id="myArchiveIcon">
                         archive
@@ -86,6 +90,7 @@
 
             btn.setAttribute("aria-expanded", String(!collapsed));
             toggleIcon.textContent = collapsed ? "arrow_forward_ios" : "arrow_back_ios";
+            document.getElementById("mainBoardsText").textContent = collapsed ? "" : "내가 만든 보드";
             myArchiveText.textContent = collapsed ? "" : "내 보드 기록";
             publicArchiveText.textContent = collapsed ? "" : "공개된 보드 기록";
             logoutText.textContent = collapsed ? "" : "로그아웃";
@@ -171,8 +176,8 @@
                     e.preventDefault();
                     const publicId = el.dataset.publicId;
                     const title = el.dataset.title;
-                    if (!confirm('"' + title + '" 보드를 삭제하시겠습니까?')) return;
-                    deleteBoard(publicId, el.closest(".board-item"));
+                    if (!confirm('"' + title + '" 보드를 삭제하시겠습니까? 보드 페이지로 이동 후 삭제 확인이 필요합니다.')) return;
+                    window.location.href = "/boards/" + publicId + "?delete=1";
                 });
             });
         }
@@ -181,29 +186,6 @@
             const div = document.createElement("div");
             div.textContent = s;
             return div.innerHTML;
-        }
-
-        function deleteBoard(publicId, listItem) {
-            fetch("/api/boards/" + publicId, {
-                method: "DELETE",
-                credentials: "include",
-            })
-                .then((r) => {
-                    if (r.status === 401) {
-                        alert("로그인이 필요합니다.");
-                        return;
-                    }
-                    if (r.status === 403) {
-                        alert("보드 생성자만 삭제할 수 있습니다.");
-                        return;
-                    }
-                    if (!r.ok) throw new Error("삭제에 실패했습니다.");
-                    listItem.remove();
-                    if (boardList.querySelectorAll(".board-item").length === 0) {
-                        boardList.innerHTML = "<li class='board-item'><span class='board-title'>보드가 없습니다. + 버튼으로 새 보드를 만드세요.</span></li>";
-                    }
-                })
-                .catch((err) => alert(err.message));
         }
 
         // 보드 만들기

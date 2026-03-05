@@ -14,6 +14,26 @@ $(document).ready(function () {
   let imageInsertMode = false;
   let pendingImagePosition = null;
 
+  const FONT_STORAGE_KEY = 'board_note_font';
+  function getNoteFontSettings() {
+    try {
+      const s = localStorage.getItem(FONT_STORAGE_KEY);
+      if (s) {
+        const parsed = JSON.parse(s);
+        return {
+          size: Math.min(24, Math.max(12, parseInt(parsed.size, 10) || 16)),
+          family: parsed.family || 'BoardHandFont, sans-serif',
+        };
+      }
+    } catch (_) {}
+    return { size: 16, family: 'BoardHandFont, sans-serif' };
+  }
+  function setNoteFontSettings(size, family) {
+    try {
+      localStorage.setItem(FONT_STORAGE_KEY, JSON.stringify({ size: size, family: family }));
+    } catch (_) {}
+  }
+
   const socket = io('/', {
     withCredentials: true,
   });
@@ -107,6 +127,13 @@ $(document).ready(function () {
         renderBoard();
         renderNotes();
         renderWingbarMyNotes();
+        if (window.location.search.includes('delete=1')) {
+          const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+          if (isBoardOwner) {
+            openBoardDeleteModal();
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        }
       })
       .catch((err) => alert(err.message || '보드 로드 실패'));
   }
@@ -168,9 +195,11 @@ $(document).ready(function () {
     if (isBoardOwner) {
       $('#board-title').css('cursor', 'pointer');
       $('#wingbar-regenerate-link').show();
+      $('#wingbar-delete-board').show();
     } else {
       $('#board-title').css('cursor', 'default');
       $('#wingbar-regenerate-link').hide();
+      $('#wingbar-delete-board').hide();
     }
   }
 
@@ -360,9 +389,11 @@ $(document).ready(function () {
           }),
         );
       }
+      const font = getNoteFontSettings();
       $body.append(
         $('<div>')
           .addClass('note-text')
+          .css({ fontSize: font.size + 'px', fontFamily: font.family })
           .text(note.text || ''),
       );
       $el.append($body);
@@ -469,6 +500,35 @@ $(document).ready(function () {
     highlightNote(null);
   });
 
+  function applyFontToModals() {
+    const font = getNoteFontSettings();
+    $('#note-modal-text, #note-detail-text, #note-detail-edit-textarea').css({
+      fontSize: font.size + 'px',
+      fontFamily: font.family,
+    });
+  }
+
+  (function initFontControls() {
+    const font = getNoteFontSettings();
+    $('#note-font-size').val(font.size);
+    $('#note-font-size-value').text(font.size + 'px');
+    $('#note-font-family').val(font.family);
+    applyFontToModals();
+    $('#note-font-size').on('input', function () {
+      const size = parseInt($(this).val(), 10);
+      $('#note-font-size-value').text(size + 'px');
+      setNoteFontSettings(size, getNoteFontSettings().family);
+      renderNotes();
+      applyFontToModals();
+    });
+    $('#note-font-family').on('change', function () {
+      const family = $(this).val();
+      setNoteFontSettings(getNoteFontSettings().size, family);
+      renderNotes();
+      applyFontToModals();
+    });
+  })();
+
   $(document).on('click', '#wingbar-my-notes .wingbar-note-item', function () {
     const noteId = $(this).attr('data-note-id');
     highlightNote(noteId);
@@ -486,6 +546,123 @@ $(document).ready(function () {
     closeWingbar();
     openLinkRegenerateModal();
   });
+
+  // 보드 삭제 (보드 생성자만)
+  function openBoardDeleteModal() {
+    $('#board-delete-modal').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeBoardDeleteModal() {
+    $('#board-delete-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $('#wingbar-delete-board').on('click', function () {
+    closeWingbar();
+    openBoardDeleteModal();
+  });
+  $(document).on('click', '#board-delete-modal .note-modal-backdrop[data-close="true"]', closeBoardDeleteModal);
+  $('#board-delete-cancel').on('click', closeBoardDeleteModal);
+  const SNAPSHOT_MAX_BYTES = 5 * 1024 * 1024;
+
+  function reduceSnapshotToMaxSize(canvas, depth) {
+    depth = depth || 0;
+    if (depth > 5) return Promise.reject(new Error('이미지 축소에 실패했습니다.'));
+
+    function toBlobP(mime, quality) {
+      return new Promise(function (resolve, reject) {
+        canvas.toBlob(function (b) {
+          if (b) resolve(b);
+          else reject(new Error('Blob 생성 실패'));
+        }, mime, quality);
+      });
+    }
+
+    function tryFormat(mime, quality, ext) {
+      return toBlobP(mime, quality).then(function (blob) {
+        if (blob.size <= SNAPSHOT_MAX_BYTES) return { blob: blob, filename: 'snapshot.' + ext };
+        return null;
+      });
+    }
+
+    return tryFormat('image/png', undefined, 'png')
+      .then(function (ok) {
+        if (ok) return ok;
+        return tryFormat('image/jpeg', 0.9, 'jpg');
+      })
+      .then(function (ok) {
+        if (ok) return ok;
+        return tryFormat('image/jpeg', 0.75, 'jpg');
+      })
+      .then(function (ok) {
+        if (ok) return ok;
+        return tryFormat('image/jpeg', 0.55, 'jpg');
+      })
+      .then(function (ok) {
+        if (ok) return ok;
+        var scale = 0.8;
+        var c2 = document.createElement('canvas');
+        c2.width = Math.floor(canvas.width * scale);
+        c2.height = Math.floor(canvas.height * scale);
+        c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
+        return reduceSnapshotToMaxSize(c2, depth + 1);
+      });
+  }
+
+  $('#board-delete-confirm').on('click', function () {
+    const $btn = $('#board-delete-confirm');
+    $btn.prop('disabled', true);
+    closeBoardDeleteModal();
+    if (typeof html2canvas === 'undefined') {
+      alert('스냅샷 캡처를 불러오지 못했습니다. 페이지를 새로고침 후 다시 시도해 주세요.');
+      $btn.prop('disabled', false);
+      return;
+    }
+    html2canvas($container[0], { useCORS: true, allowTaint: true, scale: 1 })
+      .then(function (canvas) {
+        return reduceSnapshotToMaxSize(canvas);
+      })
+      .then(function (_ref) {
+        var blob = _ref.blob;
+        var filename = _ref.filename;
+        const formData = new FormData();
+        formData.append('file', blob, filename);
+        formData.append('board_public_id', publicId);
+        return fetch('/api/snapshots', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        })
+          .then(function (res) { return res.json().then(function (d) { return { res: res, d: d }; }); })
+          .then(function (_ref) {
+            if (!_ref.res.ok) throw new Error(_ref.d?.error?.message || '스냅샷 업로드에 실패했습니다.');
+            return _ref.d.image_key;
+          });
+      })
+      .then(function (imageKey) {
+        return fetch('/api/boards/' + publicId, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_key: imageKey })
+        });
+      })
+      .then(function (res) {
+        if (res.status === 401) {
+          alert('로그인이 필요합니다.');
+          return;
+        }
+        if (res.status === 403) {
+          alert('보드 생성자만 삭제할 수 있습니다.');
+          return;
+        }
+        if (!res.ok) throw new Error('삭제에 실패했습니다.');
+        window.location.href = '/main';
+      })
+      .catch(function (err) {
+        alert(err.message || '삭제에 실패했습니다.');
+        $btn.prop('disabled', false);
+        openBoardDeleteModal();
+      });
+  });
+
   $(document).on('click', '#link-regenerate-modal .note-modal-backdrop[data-close="true"]', closeLinkRegenerateModal);
   $('#link-regenerate-cancel').on('click', closeLinkRegenerateModal);
   $('#link-regenerate-confirm').on('click', function () {
@@ -551,6 +728,7 @@ $(document).ready(function () {
 
   function openNoteModal(atPosition) {
     pendingNotePosition = atPosition; // {x,y} 또는 null
+    applyFontToModals();
     $('#note-modal').addClass('is-open').attr('aria-hidden', 'false');
     $('#note-modal-text').val('').focus();
     updateCharCount($('#note-modal-text'), $('#note-modal-char-count'));
@@ -719,6 +897,7 @@ $(document).ready(function () {
   function openNoteDetailModal(noteId) {
     const note = notes.find((n) => n.id === noteId);
     if (!note) return;
+    applyFontToModals();
     detailModalNoteId = noteId;
     highlightNote(noteId);
     const $noteEl = $container.find('.note[data-note-id="' + noteId + '"]');
@@ -962,6 +1141,8 @@ $(document).ready(function () {
   function closeImageModal() {
     $('#image-modal').removeClass('is-open').attr('aria-hidden', 'true');
     pendingImagePosition = null;
+    imageInsertMode = false;
+    $('#btn-add-image').removeClass('image-mode-active');
   }
 
   $(document).on(
@@ -977,40 +1158,67 @@ $(document).ready(function () {
       alert('이미지 파일을 선택해 주세요.');
       return;
     }
+
+    const MAX_SIZE = 3 * 1024 * 1024;
+    if (input.files[0].size > MAX_SIZE) {
+      alert('파일 크기는 3MB를 초과할 수 없습니다. (현재: ' + (input.files[0].size / 1024 / 1024).toFixed(2) + 'MB)');
+      return;
+    }
+
     if (!pendingImagePosition) {
       closeImageModal();
       return;
     }
     const { x, y } = pendingImagePosition;
-    const formData = new FormData();
-    formData.append('file', input.files[0]);
+    const file = input.files[0];
 
-    fetch(`/api/boards/${publicId}/images`, {
+    fetch(`/api/boards/${publicId}/presigned-url`, {
       method: 'POST',
       credentials: 'include',
-      body: formData,
-    })
-      .then(async (res) => {
-        if (res.status === 401) {
-          showLoginRequiredModal();
-          return null;
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({filename: file.name})
+    }).then(async (res) => {
+      if (res.status === 401) {
+        showLoginRequiredModal();
+        return null;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error?.message || '업로드 URL 생성에 실패했습니다.');
+      }
+      return res.json()
+    }).then((data) => {
+      if (!data) return;
+
+      const presignedUrlData = data.presigned_url;
+      const imageKey = data.image_key;
+
+      const formData = new FormData();
+
+      Object.keys(presignedUrlData.fields).forEach((key) => {
+        formData.append(key, presignedUrlData.fields[key]);
+      });
+
+      formData.append('Content-Type', file.type)
+
+      formData.append('file', file);
+
+      return fetch(presignedUrlData.url, {
+        method: 'POST',
+        body: formData,
+      }).then((s3Res) => {
+        if (!s3Res.ok) {
+          throw new Error('S3 이미지 업로드에 실패했습니다.')
         }
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(
-            data?.error?.message || '이미지 업로드에 실패했습니다.',
-          );
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data) {
-          createNote(x, y, '', data.image_key);
+        createNote(x, y, '', imageKey);
           closeImageModal();
           imageInsertMode = false;
           $('#btn-add-image').removeClass('image-mode-active');
-        }
-      })
-      .catch((err) => alert(err.message));
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      alert(err.message);
+    })
   });
 });

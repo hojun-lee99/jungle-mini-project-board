@@ -14,6 +14,14 @@ MINIMAL_PNG_BYTES = (
     b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
 )
 
+MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
+
+
+def make_over_5mb_png():
+    """5MB를 초과하는 이미지 바이트 생성 (서버 크기 검증 테스트용)."""
+    padding = MAX_SIZE_BYTES - len(MINIMAL_PNG_BYTES) + 1
+    return MINIMAL_PNG_BYTES + b"\x00" * padding
+
 
 class TestUploadSnapshot:
     """POST /api/snapshots - 스냅샷 이미지 업로드"""
@@ -73,6 +81,18 @@ class TestUploadSnapshot:
         assert "image_key" in body
         assert body["image_key"].startswith("snapshots/") or body["image_key"].startswith("uploads/snapshots/")
         assert body["image_key"].endswith(".png")
+
+    def test_5MB_초과_업로드_400(self, auth_client, board_with_public_id):
+        """5MB 초과 이미지 업로드 시 400, 에러 메시지 반환"""
+        public_id = board_with_public_id
+        over_5mb = make_over_5mb_png()
+        assert len(over_5mb) > MAX_SIZE_BYTES
+        data = {"file": (io.BytesIO(over_5mb), "snapshot.png"), "board_public_id": public_id}
+        res = auth_client.post("/api/snapshots", data=data)
+        assert res.status_code == 400
+        body = res.get_json()
+        assert body["error"]["code"] == "VALIDATION_ERROR"
+        assert "5MB" in body["error"]["message"]
 
 
 class TestListMine:
