@@ -19,7 +19,7 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from pymongo import ReturnDocument
 from utils import utc_now
-from utils.s3_utiles import generate_presigned_url
+from utils.s3_utils import generate_presigned_url
 
 boards_bp = Blueprint("boards", __name__, url_prefix="/api/boards")
 
