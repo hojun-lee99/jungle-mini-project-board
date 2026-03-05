@@ -286,11 +286,15 @@ def delete_board(public_id: str):
     board_id = board["_id"]
     owner_id = board["owner_user_id"]
 
-    # 1. 스냅샷 레코드 저장 (이미지 생성은 TODO, 레코드만 먼저 저장)
+    # image_key: 클라이언트가 POST /api/snapshots로 업로드 후 본문에 포함
+    data = request.get_json(silent=True) or {}
+    image_key = data.get("image_key") or ""
+
+    # 1. 스냅샷 레코드 저장
     try:
         snapshots.insert_one({
             "board_owner_id": owner_id,
-            "image_key": "",  # TODO: 실제 스냅샷 이미지 저장
+            "image_key": image_key,
             "is_public": False,
             "created_at": now,
         })
