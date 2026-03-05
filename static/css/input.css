@@ -3,6 +3,7 @@
 
 @layer components {
   .form-input {
+    /* stylelint-disable-next-line at-rule-no-unknown */
     @apply block w-full rounded-md bg-white border border-black px-3 py-1.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-2 focus:outline-[#05d182] sm:text-sm/6;
   }
 }
