@@ -56,7 +56,7 @@ $(document).ready(function() {
                         showError("이름은 2자 이상, 7자 이하로 입력해주세요.");
                     }
                     else if (password.length < 8) {
-                        message = "비밀번호는 적어도 8자리보다 길어야 합니다.";
+                        showError("비밀번호는 적어도 8자리보다 길어야 합니다.");
                     }
                 }
 
