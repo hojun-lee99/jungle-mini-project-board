@@ -294,6 +294,7 @@ def delete_board(public_id: str):
     try:
         snapshots.insert_one({
             "board_owner_id": owner_id,
+            "title": board.get("title") or "",
             "image_key": image_key,
             "is_public": False,
             "created_at": now,

@@ -127,6 +127,7 @@ def list_mine():
     def _serialize(doc):
         return {
             "id": str(doc["_id"]),
+            "title": doc.get("title", ""),  
             "image_url": f"/api/snapshots/{doc['_id']}/image",
             "is_public": doc.get("is_public", False),
             "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
