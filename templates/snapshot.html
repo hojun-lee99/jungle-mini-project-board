@@ -150,7 +150,7 @@
                             <div class="board-footer-actions">
                                 <div class="board-public">
                                     <span>공개여부</span>
-                                    <input type="checkbox" class="board-public-checkbox" data-snapshot-id="${id}" ${checked}>
+                                    <input type="checkbox" class="public-toggle" data-id="${id}" ${checked}>
                                 </div>
                                 <button type="button" class="board-delete-btn" data-snapshot-id="${id}" title="삭제">삭제</button>
                             </div>
@@ -159,6 +159,31 @@
 
                 $("#card-list").append(tempHtml);
             }
+
+            // 이벤트 위임: 동적으로 생성된 체크박스 작동
+            $(document).on("change", ".public-toggle", function () {
+                const snapshotId = $(this).data("id");
+                const isPublic = $(this).is(":checked");
+                $.ajax({
+                    type: "PATCH",
+                    url: `/api/snapshots/${snapshotId}`,
+                    contentType: "application/json",
+                    data: JSON.stringify({ is_public: isPublic }),
+                    credentials: "include",
+                    success: function () {
+                        // 성공: 그대로 유지
+                    },
+                    error: function (xhr) {
+                        // 실패: 체크 상태 원복
+                        const msg = xhr.responseJSON?.error?.message || "공개 여부 변경에 실패했습니다.";
+                        alert(msg);
+                        $(`.public-toggle[data-id="${snapshotId}"]`).prop("checked", !isPublic);
+                    },
+                    complete: function () {
+                        $(`.public-toggle[data-id="${snapshotId}"]`).prop("disabled", false);
+                    }
+                });
+            });
 
             // 이미지 클릭 시 확대 보기
             $(document).on("click", ".board-thumb-clickable", function () {
@@ -174,28 +199,6 @@
             $("#image-lightbox .image-lightbox-backdrop, #image-lightbox .image-lightbox-close").on("click", closeImageLightbox);
             $(document).on("keydown", function (e) {
                 if (e.key === "Escape" && $("#image-lightbox").hasClass("is-open")) closeImageLightbox();
-            });
-
-            // 공개 여부 체크박스
-            $(document).on("change", ".board-public-checkbox", function () {
-                const id = $(this).data("snapshot-id");
-                if (!id) return;
-                const isPublic = $(this).prop("checked");
-                $.ajax({
-                    type: "PATCH",
-                    url: "/api/snapshots/" + id,
-                    contentType: "application/json",
-                    data: JSON.stringify({ is_public: isPublic }),
-                    credentials: "include",
-                    success: function () { },
-                    error: (function (checkbox, wasPublic) {
-                        return function (xhr) {
-                            $(checkbox).prop("checked", wasPublic);
-                            const msg = xhr.responseJSON?.error?.message || "공개 여부 변경에 실패했습니다.";
-                            alert(msg);
-                        };
-                    })($(this), !isPublic)
-                });
             });
 
             // 삭제 버튼

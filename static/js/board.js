@@ -381,7 +381,9 @@ $(document).ready(function () {
       const $body = $('<div>').addClass('note-body');
       if (note.image_url) {
         $body.append(
-          $('<img>').attr('src', note.image_url).css({
+          $('<img>').attr('src', note.image_url)
+            .attr('crossOrigin', 'anonymous')
+            .css({
             maxWidth: '100%',
             display: 'block',
             marginBottom: 4,
@@ -615,7 +617,7 @@ $(document).ready(function () {
       $btn.prop('disabled', false);
       return;
     }
-    html2canvas($container[0], { useCORS: true, allowTaint: true, scale: 1 })
+    html2canvas($container[0], { useCORS: true, scale: 1 })
       .then(function (canvas) {
         return reduceSnapshotToMaxSize(canvas);
       })
