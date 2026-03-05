@@ -107,6 +107,13 @@ $(document).ready(function () {
         renderBoard();
         renderNotes();
         renderWingbarMyNotes();
+        if (window.location.search.includes('delete=1')) {
+          const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
+          if (isBoardOwner) {
+            openBoardDeleteModal();
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        }
       })
       .catch((err) => alert(err.message || '보드 로드 실패'));
   }
@@ -168,9 +175,11 @@ $(document).ready(function () {
     if (isBoardOwner) {
       $('#board-title').css('cursor', 'pointer');
       $('#wingbar-regenerate-link').show();
+      $('#wingbar-delete-board').show();
     } else {
       $('#board-title').css('cursor', 'default');
       $('#wingbar-regenerate-link').hide();
+      $('#wingbar-delete-board').hide();
     }
   }
 
@@ -486,6 +495,80 @@ $(document).ready(function () {
     closeWingbar();
     openLinkRegenerateModal();
   });
+
+  // 보드 삭제 (보드 생성자만)
+  function openBoardDeleteModal() {
+    $('#board-delete-modal').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeBoardDeleteModal() {
+    $('#board-delete-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $('#wingbar-delete-board').on('click', function () {
+    closeWingbar();
+    openBoardDeleteModal();
+  });
+  $(document).on('click', '#board-delete-modal .note-modal-backdrop[data-close="true"]', closeBoardDeleteModal);
+  $('#board-delete-cancel').on('click', closeBoardDeleteModal);
+  $('#board-delete-confirm').on('click', function () {
+    const $btn = $('#board-delete-confirm');
+    $btn.prop('disabled', true);
+    closeBoardDeleteModal();
+    if (typeof html2canvas === 'undefined') {
+      alert('스냅샷 캡처를 불러오지 못했습니다. 페이지를 새로고침 후 다시 시도해 주세요.');
+      $btn.prop('disabled', false);
+      return;
+    }
+    html2canvas($container[0], { useCORS: true, allowTaint: true, scale: 1 })
+      .then(function (canvas) {
+        return new Promise(function (resolve, reject) {
+          canvas.toBlob(function (blob) {
+            if (blob) resolve(blob);
+            else reject(new Error('Blob 생성 실패'));
+          }, 'image/png');
+        });
+      })
+      .then(function (blob) {
+        const formData = new FormData();
+        formData.append('file', blob, 'snapshot.png');
+        formData.append('board_public_id', publicId);
+        return fetch('/api/snapshots', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        })
+          .then(function (res) { return res.json().then(function (d) { return { res: res, d: d }; }); })
+          .then(function (_ref) {
+            if (!_ref.res.ok) throw new Error(_ref.d?.error?.message || '스냅샷 업로드에 실패했습니다.');
+            return _ref.d.image_key;
+          });
+      })
+      .then(function (imageKey) {
+        return fetch('/api/boards/' + publicId, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_key: imageKey })
+        });
+      })
+      .then(function (res) {
+        if (res.status === 401) {
+          alert('로그인이 필요합니다.');
+          return;
+        }
+        if (res.status === 403) {
+          alert('보드 생성자만 삭제할 수 있습니다.');
+          return;
+        }
+        if (!res.ok) throw new Error('삭제에 실패했습니다.');
+        window.location.href = '/main';
+      })
+      .catch(function (err) {
+        alert(err.message || '삭제에 실패했습니다.');
+        $btn.prop('disabled', false);
+        openBoardDeleteModal();
+      });
+  });
+
   $(document).on('click', '#link-regenerate-modal .note-modal-backdrop[data-close="true"]', closeLinkRegenerateModal);
   $('#link-regenerate-cancel').on('click', closeLinkRegenerateModal);
   $('#link-regenerate-confirm').on('click', function () {
