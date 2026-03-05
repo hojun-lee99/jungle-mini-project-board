@@ -26,6 +26,7 @@ from flask_jwt_extended import create_access_token
 def client():
     """Flask 테스트 클라이언트."""
     app.config["TESTING"] = True
+    app.config["S3_BUCKET_NAME"] = ""  # 테스트 시 로컬 저장 사용
     # 테스트에서 헤더로도 JWT 전달 가능하도록 설정
     app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
     with app.test_client() as c:
