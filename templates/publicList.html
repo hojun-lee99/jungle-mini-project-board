@@ -21,19 +21,20 @@
             </button>
 
             <nav class="sidebar-nav">
-                <a class="nav-item" href="#">
+                <button class="nav-item" href="#" id="snapshot-btn">
                     <span class="material-symbols-outlined" id="myArchiveIcon">
                         archive
                     </span>
                     <span class="txt" id="myArchiveText">내 보드 기록</span>
-                </a>
-                <a class="nav-item is-active" href="#">
+                </button>
+                <button class="nav-item is-active" href="#" id="publicList-btn">
                     <span class="material-symbols-outlined" id="publicArchiveIcon">
                         public
                     </span>
                     <span class="txt" id="publicArchiveText">
                         공개된 보드 기록
                     </span>
+                </button>
                 </a>
             </nav>
 
@@ -115,6 +116,16 @@
                 myArchiveText.textContent = collapsed ? "" : "내 보드 기록";
                 publicArchiveText.textContent = collapsed ? "" : "공개된 보드 기록";
                 logoutText.textContent = collapsed ? "" : "로그아웃";
+            });
+
+            // 내 보드 기록 버튼 - 스냅샷 페이지로 이동
+            $("#snapshot-btn").click(function () {
+                window.location.href = "/snapshot";
+            });
+
+            // 공개된 보드 기록 버튼 - publicList 페이지로 이동
+            $("#publicList-btn").click(function () {
+                window.location.href = "/publicList";
             });
         </script>
 
