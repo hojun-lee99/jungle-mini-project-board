@@ -41,6 +41,12 @@ def home():
     return render_template('login.html')
 
 
+@app.route('/register')
+def register_page():
+    """회원가입 페이지."""
+    return render_template('register.html')
+
+
 @app.route('/main')
 def main():
     """로그인 후 내 보드 목록 페이지."""
