@@ -8,6 +8,7 @@
         integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
     <title>공개된 보드 기록</title>
     <link href="../static/css/publicList.css" rel="stylesheet" />
+    <link href="../static/css/snapshot.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
 </head>
 
@@ -59,55 +60,19 @@
         <main class="content">
             <h1>공개된 보드 기록</h1>
             <div class="content-body">
-                <ul class="board-grid">
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-                    <li class="board-card">
-                        <a class="board-link" href="https://ibb.co/TxhxR1qG">
-                            <div class="board-thumb"><img src="https://i.ibb.co/67s7b8JS/Gq-g-K-rb-MAEt7-Am.jpg"></div>
-                            <div class="board-name">보드 이름</div>
-                        </a>
-                    </li>
-                </ul>
+                <ul class="board-grid" id="card-list"></ul>
+                <p class="public-empty" id="public-empty" style="display: none;">공개된 보드 기록이 없습니다.</p>
             </div>
         </main>
+
+        <!-- 이미지 확대 뷰 모달 -->
+        <div class="image-lightbox" id="image-lightbox" aria-hidden="true">
+            <div class="image-lightbox-backdrop"></div>
+            <div class="image-lightbox-content">
+                <button type="button" class="image-lightbox-close" aria-label="닫기">&times;</button>
+                <img class="image-lightbox-img" src="" alt="확대 보기" />
+            </div>
+        </div>
         <script>
             const sidebar = document.getElementById("sidebar");
             const btn = document.getElementById("toggleBtn");
@@ -147,6 +112,60 @@
             // 홈버튼 - main 페이지로 이동
             $("#home-btn").click(function () {
                 window.location.href = "/main";
+            });
+
+            // 공개 스냅샷 목록 조회
+            $(document).ready(function () { showPublicSnapshots(); });
+
+            function showPublicSnapshots() {
+                $.ajax({
+                    type: "GET",
+                    url: "/api/snapshots/public",
+                    success: function (response) {
+                        const shots = response.snapshots || [];
+                        const $list = $("#card-list");
+                        const $empty = $("#public-empty");
+                        $list.empty();
+                        if (shots.length === 0) {
+                            $empty.show();
+                            return;
+                        }
+                        $empty.hide();
+                        shots.forEach(function (s) {
+                            makePublicCard(s.id, s.image_url, s.owner_username, s.created_at);
+                        });
+                    },
+                    error: function (xhr) {
+                        const msg = xhr.responseJSON?.error?.message || "공개 보드 기록을 불러오지 못했습니다.";
+                        alert(msg);
+                    }
+                });
+            }
+
+            function makePublicCard(id, image_url, owner_username, created_at) {
+                const dateStr = created_at ? new Date(created_at).toLocaleDateString("ko-KR") : "";
+                const label = [owner_username, dateStr].filter(Boolean).join(" · ") || "공개 보드";
+                const html = `<li class="board-card" data-snapshot-id="${id}">
+                    <div class="board-thumb board-thumb-clickable" data-image-url="${image_url}"><img src="${image_url}" alt=""></div>
+                    <div class="board-footer"><div class="board-name">${label}</div></div>
+                </li>`;
+                $("#card-list").append(html);
+            }
+
+            // 이미지 클릭 시 확대 보기
+            $(document).on("click", ".board-thumb-clickable", function () {
+                const url = $(this).data("image-url");
+                if (!url) return;
+                $("#image-lightbox .image-lightbox-img").attr("src", url);
+                $("#image-lightbox").addClass("is-open").attr("aria-hidden", "false");
+            });
+            function closeImageLightbox() {
+                $("#image-lightbox").removeClass("is-open").attr("aria-hidden", "true");
+                $("#image-lightbox .image-lightbox-img").attr("src", "");
+            }
+            $("#image-lightbox .image-lightbox-backdrop, #image-lightbox .image-lightbox-close").on("click", closeImageLightbox);
+            $(document).on("keydown", function (e) {
+                if (e.key === "Escape" && $("#image-lightbox").hasClass("is-open")) closeImageLightbox();
             });
         </script>
 
