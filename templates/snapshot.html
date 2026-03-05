@@ -100,6 +100,13 @@
                 logoutText.textContent = collapsed ? "" : "로그아웃";
             });
 
+            // 로그아웃
+            document.querySelector(".logout").addEventListener("click", () => {
+                fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+                    .then(() => { window.location.href = "/"; })
+                    .catch(() => alert("로그아웃에 실패했습니다."));
+            });
+
             // 내 보드 기록 버튼 - 스냅샷 페이지로 이동
             $("#snapshot-btn").click(function () {
                 window.location.href = "/snapshot";
