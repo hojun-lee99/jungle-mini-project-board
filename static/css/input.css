@@ -1,0 +1,8 @@
+/* 폴더 구조를 위한 더미 파일 */
+@import 'tailwindcss';
+
+@layer components {
+  .form-input {
+    @apply block w-full rounded-md bg-white border border-black px-3 py-1.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-2 focus:outline-[#05d182] sm:text-sm/6;
+  }
+}
