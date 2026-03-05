@@ -977,6 +977,13 @@ $(document).ready(function () {
       alert('이미지 파일을 선택해 주세요.');
       return;
     }
+
+    const MAX_SIZE = 3 * 1024 * 1024;
+    if (input.files[0].size > MAX_SIZE) {
+      alert('파일 크기는 3MB를 초과할 수 없습니다. (현재: ' + (input.files[0].size / 1024 / 1024).toFixed(2) + 'MB)');
+      return;
+    }
+
     if (!pendingImagePosition) {
       closeImageModal();
       return;
