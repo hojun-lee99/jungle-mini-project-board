@@ -33,8 +33,8 @@ $(document).ready(function() {
             success: function(response) {
                 alert("회원가입이 완료되었습니다!");
                 
-                 // 로그인 성공 시 메인(내 칠판 목록) 페이지로 리다이렉트
-                window.location.href = "/login";
+                 // 회원가입 성공 시 기본 페이지로 리다이렉트
+                window.location.href = "/";
             },
             error:function(xhr) 
             {
@@ -51,7 +51,7 @@ $(document).ready(function() {
                 
                     //showError(xhr.responseJSON.error)
                     showError("유효성 검사 실패");
-
+                    
                     if(username.length < 2 || username.length > 7) {
                         showError("이름은 2자 이상, 7자 이하로 입력해주세요.");
                     }
