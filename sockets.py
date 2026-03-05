@@ -1,6 +1,6 @@
 # sockets.py
 from flask import request
-from flask_socketio import ConnectionRefusedError, join_room
+from flask_socketio import ConnectionRefusedError, join_room, emit
 from flask_jwt_extended import decode_token
 from extensions import socketio
 
@@ -31,3 +31,11 @@ def on_join_board(data):
         room_name = f"board_{public_id}"
         join_room(room_name)
         print(f"[{room_name}] 방에 유저가 입장했습니다.")
+
+@socketio.on('move_note')
+def on_move_note(data):
+    public_id = data.get('public_id')
+    if public_id:
+        room_name = f"board_{public_id}"
+
+        emit('note_moved', data, room=room_name, include_self=False)
