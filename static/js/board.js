@@ -56,6 +56,17 @@ $(document).ready(function () {
     }
   });
 
+  socket.on('note_created', function (data) {
+    if (data && data.note) {
+      const exists = notes.find((n) => String(n.id) === String(data.note.id));
+
+      if (!exists) {
+        notes.push(data.note);
+        renderNotes();
+      }
+    }
+  })
+
   function loadBoard() {
     fetch(`/api/boards/${publicId}`, { credentials: 'include' })
       .then(async (res) => {
@@ -365,6 +376,11 @@ $(document).ready(function () {
           notes.push(note);
           renderNotes();
           renderWingbarMyNotes();
+
+          socket.emit('create_note', {
+            public_id: publicId,
+            note: note,
+          })
         }
       })
       .catch((err) => alert(err.message));

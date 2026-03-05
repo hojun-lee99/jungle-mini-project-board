@@ -39,3 +39,11 @@ def on_move_note(data):
         room_name = f"board_{public_id}"
 
         emit('note_moved', data, room=room_name, include_self=False)
+
+@socketio.on('create_note')
+def on_create_note(data):
+    public_id = data.get('public_id')
+    if public_id:
+        room_name = f"board_{public_id}"
+        print(room_name)
+        emit('note_created', data, room=room_name, include_self=False)
