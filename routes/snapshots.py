@@ -17,6 +17,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from botocore.exceptions import ClientError
 
 from utils import utc_now
+from utils.s3_utils import delete_s3_prefix
 
 snapshots_bp = Blueprint("snapshots", __name__, url_prefix="/api/snapshots")
 
@@ -347,6 +348,9 @@ def delete_snapshot(snapshot_id: str):
         return jsonify({
             "error": {"code": "FORBIDDEN", "message": "스냅샷 소유자만 삭제할 수 있습니다.", "details": {}}
         }), 403
+
+    s3_folder_path = f"snapshots/{snap['board_owner_id']}/"
+    delete_s3_prefix(s3_folder_path)
 
     db["snapshots"].delete_one({"_id": oid})
     return "", 204
