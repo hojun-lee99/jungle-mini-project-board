@@ -195,12 +195,28 @@ div {
   display:block;
 }
 
-.board-name{
-  font-size:14px;
+.board-name {
+  font-size:16px;
   color:#333;
 }
 
 .board-footer{
-    display: flex;
-    text-align: center;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:10px;
+  padding: 10px;
+  /* padding-left: 10px;
+  padding-right: 10px; */
 }
+
+.board-public{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  font-size: 14px;
+}
+/* 
+.board-name {
+    padding-right: 10px;
+} */
