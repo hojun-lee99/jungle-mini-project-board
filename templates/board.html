@@ -160,7 +160,14 @@
       }
       .wingbar-item:hover {
         background: #f3f4f6;
-        color: #111827;
+      }
+      .wingbar-item-btn {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
       }
       .wingbar-item-icon {
         font-size: 18px;
@@ -494,6 +501,10 @@
           <span class="wingbar-item-icon">≡</span>
           <span>내 보드 목록</span>
         </a>
+        <button type="button" id="wingbar-regenerate-link" class="wingbar-item wingbar-item-btn" style="display:none;">
+          <span class="wingbar-item-icon">🔗</span>
+          <span>링크 재발급</span>
+        </button>
         <div class="wingbar-section">
           <h3 class="wingbar-section-title">내가 쓴 메모</h3>
           <ul class="wingbar-note-list" id="wingbar-my-notes"></ul>
@@ -501,6 +512,19 @@
         </div>
       </div>
     </aside>
+
+    <!-- 링크 재발급 확인 모달 (보드 생성자만) -->
+    <div class="note-modal" id="link-regenerate-modal" aria-hidden="true">
+      <div class="note-modal-backdrop" data-close="true"></div>
+      <div class="note-modal-panel">
+        <h3 class="note-modal-title">링크 재발급</h3>
+        <p class="note-modal-hint">기존 공유 링크가 즉시 무효화됩니다. 새 링크로 변경하시겠습니까?</p>
+        <div class="note-modal-actions">
+          <button type="button" id="link-regenerate-cancel" class="note-modal-btn note-modal-btn-secondary">취소</button>
+          <button type="button" id="link-regenerate-confirm" class="note-modal-btn note-modal-btn-primary">변경</button>
+        </div>
+      </div>
+    </div>
 
     <!-- 보드 제목 수정 모달 (보드 생성자만) -->
     <div class="note-modal" id="board-title-modal" aria-hidden="true">

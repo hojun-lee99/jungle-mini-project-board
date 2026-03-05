@@ -85,8 +85,10 @@ $(document).ready(function () {
     const isBoardOwner = !!(currentUserId && board && String(board.owner_user_id) === String(currentUserId));
     if (isBoardOwner) {
       $('#board-title').css('cursor', 'pointer');
+      $('#wingbar-regenerate-link').show();
     } else {
       $('#board-title').css('cursor', 'default');
+      $('#wingbar-regenerate-link').hide();
     }
   }
 
@@ -264,6 +266,56 @@ $(document).ready(function () {
     const noteId = $(this).attr('data-note-id');
     highlightNote(noteId);
     openNoteDetailModal(noteId);
+  });
+
+  // 링크 재발급 (보드 생성자만)
+  function openLinkRegenerateModal() {
+    $('#link-regenerate-modal').addClass('is-open').attr('aria-hidden', 'false');
+  }
+  function closeLinkRegenerateModal() {
+    $('#link-regenerate-modal').removeClass('is-open').attr('aria-hidden', 'true');
+  }
+  $('#wingbar-regenerate-link').on('click', function () {
+    closeWingbar();
+    openLinkRegenerateModal();
+  });
+  $(document).on('click', '#link-regenerate-modal .note-modal-backdrop[data-close="true"]', closeLinkRegenerateModal);
+  $('#link-regenerate-cancel').on('click', closeLinkRegenerateModal);
+  $('#link-regenerate-confirm').on('click', function () {
+    const newPublicId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+    const $btn = $('#link-regenerate-confirm');
+    $btn.prop('disabled', true);
+    fetch(`/api/boards/${publicId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ public_id: newPublicId }),
+    })
+      .then(async (res) => {
+        if (res.status === 401) { showLoginRequiredModal(); return null; }
+        if (res.status === 403) { alert('보드 생성자만 링크를 변경할 수 있습니다.'); return null; }
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d?.error?.message || '링크 변경에 실패했습니다.');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.public_id) {
+          closeLinkRegenerateModal();
+          window.location.href = '/boards/' + data.public_id;
+        }
+      })
+      .catch((err) => {
+        $btn.prop('disabled', false);
+        alert(err.message);
+      });
   });
 
   let pendingNotePosition = null; // 더블클릭 시 생성 위치 저장 (null이면 + 버튼 경로)
