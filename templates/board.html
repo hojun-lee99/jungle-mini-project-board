@@ -545,6 +545,19 @@
       </div>
     </aside>
 
+    <!-- 보드 제목 수정 모달 (보드 생성자만) -->
+    <div class="note-modal" id="board-title-modal" aria-hidden="true">
+      <div class="note-modal-backdrop" data-close="true"></div>
+      <div class="note-modal-panel">
+        <h3 class="note-modal-title">보드 제목 수정</h3>
+        <input type="text" id="board-title-input" class="note-modal-textarea" placeholder="보드 제목" style="margin-bottom:20px;" />
+        <div class="note-modal-actions">
+          <button type="button" id="board-title-cancel" class="note-modal-btn note-modal-btn-secondary">취소</button>
+          <button type="button" id="board-title-save" class="note-modal-btn note-modal-btn-primary">저장</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 새 포스트잇 모달 -->
     <div class="note-modal" id="note-modal" aria-hidden="true">
       <div class="note-modal-backdrop" data-close="true"></div>
