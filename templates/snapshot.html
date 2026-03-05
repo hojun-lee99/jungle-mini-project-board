@@ -100,6 +100,12 @@
                 window.location.href = "/main";
             });
 
+            // // 체크박스 값이 변경되는 순간마다 패치 
+            // $("#public-btn").change(function () {
+            //     const is_checked = $("#public-btn").is(checked) ? "checked" : "";
+
+            //     updateToggle(is_checked);
+            // });
 
             // 새로고침 할 때마다 스냅샷 리스트 조회
             $(document).ready(function () { showSnapshots() });
@@ -108,40 +114,119 @@
                 $.ajax({
                     type: "GET",
                     url: "/api/snapshots/mine",
-                    data: {},
                     success: function (response) {
-                        console.log(response);
-                        let shots = response["snapshots"];
+                        const shots = response["snapshots"] || [];
+                        $("#card-list").empty();
                         for (let i = 0; i < shots.length; i++) {
                             makeSnapshotCard(shots[i]["id"], shots[i]["title"], shots[i]["image_url"], shots[i]["is_public"]);
                         }
-                        //list.forEach((snapshot) => makeSnapshotCard(snapshot));
                     },
                     error: function (xhr) {
                         const msg = xhr.responseJSON?.error?.message || "스냅샷 목록을 불러오지 못했습니다.";
                         alert(msg);
                     }
-                }
-                )
+                });
             }
 
-            function makeSnapshotCard(id, title, image_url, is_public) {
+            function makeSnapshotCard(id, _title, image_url, is_public) {
                 const checked = is_public ? "checked" : "";
+                const title = (_title && String(_title).trim()) ? _title : "제목 없음";
 
-                let tempHtml =
-                    ` <li class="board-card">
-                        <div class="board-thumb"><img src="${image_url}"></div>
-                        <div class="board-footer">
-                            <div class="board-name">${title || "제목 없음"}</div>
-                            <div class="board-public">
-                                <span>공개여부</span>
-                                <input type="checkbox" ${checked}>
-                            </div>
-                        </div>
-                    </li>`;
-
+                const tempHtml = `
+      <li class="board-card" data-snapshot-id="${id}">
+        <div class="board-thumb">
+          <img src="${image_url}" alt="snapshot">
+        </div>
+        <div class="board-footer">
+          <div class="board-name">${title}</div>
+          <div class="board-public">
+            <span>공개여부</span>
+            <input type="checkbox" class="public-toggle" data-id="${id}" ${checked}>
+          </div>
+        </div>
+      </li>
+    `;
                 $("#card-list").append(tempHtml);
             }
+
+            // 이벤트 위임: 동적으로 생성된 체크박스 작동
+            $(document).on("change", ".public-toggle", function () {
+                const snapshotId = $(this).data("id");
+                const isPublic = $(this).is(":checked");
+
+                // // UI 잠깐 잠금(연타 방지)
+                // $(this).prop("disabled", true);
+
+                $.ajax({
+                    type: "PATCH",
+                    url: `/api/snapshots/${snapshotId}`,
+                    contentType: "application/json",
+                    data: JSON.stringify({ is_public: isPublic }),
+                    success: function () {
+                        // 성공: 그대로 유지
+                    },
+                    error: function (xhr) {
+                        // 실패: 체크 상태 원복
+                        const msg = xhr.responseJSON?.error?.message || "공개 여부 변경에 실패했습니다.";
+                        alert(msg);
+                        $(`.public-toggle[data-id="${snapshotId}"]`).prop("checked", !isPublic);
+                    },
+                    complete: function () {
+                        $(`.public-toggle[data-id="${snapshotId}"]`).prop("disabled", false);
+                    }
+                });
+            });
+
+            // function showSnapshots() {
+            //     $.ajax({
+            //         type: "GET",
+            //         url: "/api/snapshots/mine",
+            //         data: {},
+            //         success: function (response) {
+            //             console.log(response);
+            //             let shots = response["snapshots"];
+            //             for (let i = 0; i < shots.length; i++) {
+            //                 makeSnapshotCard(shots[i]["id"], shots[i]["title"], shots[i]["image_url"], shots[i]["is_public"]);
+            //             }
+            //         },
+            //         error: function (xhr) {
+            //             const msg = xhr.responseJSON?.error?.message || "스냅샷 목록을 불러오지 못했습니다.";
+            //             alert(msg);
+            //         }
+            //     }
+            //     )
+            // }
+
+            // function makeSnapshotCard(id, title, image_url, is_public) {
+            //     const checked = is_public ? "checked" : "";
+
+            //     let tempHtml =
+            //         ` <li class="board-card">
+            //             <div class="board-thumb"><img src="${image_url}"></div>
+            //             <div class="board-footer">
+            //                 <div class="board-name">${title || "제목 없음"}</div>
+            //                 <div class="board-public">
+            //                     <span>공개여부</span>
+            //                     <input type="checkbox" id="public-btn" ${checked}>
+            //                 </div>
+            //             </div>
+            //         </li>`;
+
+            //     $("#card-list").append(tempHtml);
+            // }
+
+            // // 체크박스가 체크되었으면 공개, 체크 안 되었으면 비공개로 패치
+            // // 체크박스가 눌리면 무조건 호출
+            // function updateToggle(is_checked) {
+            //     $.ajax({
+            //         type: "PATH",
+            //         url: "/api/snapshots/",
+            //         data: {},
+            //         success: function (response) {
+
+            //         }
+            //     })
+            // }
         </script>
 
 
