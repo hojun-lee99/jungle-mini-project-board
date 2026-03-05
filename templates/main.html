@@ -9,6 +9,7 @@
     <title>내가 만든 보드</title>
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
 <body>
@@ -21,20 +22,24 @@
             </button>
 
             <nav class="sidebar-nav">
-                <a class="nav-item is-active" href="#">
+                <a class="nav-item is-active" href="/main" id="main-boards-btn">
+                    <span class="material-symbols-outlined" id="mainBoardsIcon">dashboard</span>
+                    <span class="txt" id="mainBoardsText">내가 만든 보드</span>
+                </a>
+                <button class="nav-item" href="#" id="snapshot-btn">
                     <span class="material-symbols-outlined" id="myArchiveIcon">
                         archive
                     </span>
                     <span class="txt" id="myArchiveText">내 보드 기록</span>
-                </a>
-                <a class="nav-item" href="#">
+                </button>
+                <button class="nav-item" href="#" id="publicList-btn">
                     <span class="material-symbols-outlined" id="publicArchiveIcon">
                         public
                     </span>
                     <span class="txt" id="publicArchiveText">
                         공개된 보드 기록
                     </span>
-                </a>
+                </button>
             </nav>
 
             <div class="sidebar-bottom">
@@ -85,6 +90,7 @@
 
             btn.setAttribute("aria-expanded", String(!collapsed));
             toggleIcon.textContent = collapsed ? "arrow_forward_ios" : "arrow_back_ios";
+            document.getElementById("mainBoardsText").textContent = collapsed ? "" : "내가 만든 보드";
             myArchiveText.textContent = collapsed ? "" : "내 보드 기록";
             publicArchiveText.textContent = collapsed ? "" : "공개된 보드 기록";
             logoutText.textContent = collapsed ? "" : "로그아웃";
@@ -170,8 +176,8 @@
                     e.preventDefault();
                     const publicId = el.dataset.publicId;
                     const title = el.dataset.title;
-                    if (!confirm('"' + title + '" 보드를 삭제하시겠습니까?')) return;
-                    deleteBoard(publicId, el.closest(".board-item"));
+                    if (!confirm('"' + title + '" 보드를 삭제하시겠습니까? 보드 페이지로 이동 후 삭제 확인이 필요합니다.')) return;
+                    window.location.href = "/boards/" + publicId + "?delete=1";
                 });
             });
         }
@@ -180,29 +186,6 @@
             const div = document.createElement("div");
             div.textContent = s;
             return div.innerHTML;
-        }
-
-        function deleteBoard(publicId, listItem) {
-            fetch("/api/boards/" + publicId, {
-                method: "DELETE",
-                credentials: "include",
-            })
-                .then((r) => {
-                    if (r.status === 401) {
-                        alert("로그인이 필요합니다.");
-                        return;
-                    }
-                    if (r.status === 403) {
-                        alert("보드 생성자만 삭제할 수 있습니다.");
-                        return;
-                    }
-                    if (!r.ok) throw new Error("삭제에 실패했습니다.");
-                    listItem.remove();
-                    if (boardList.querySelectorAll(".board-item").length === 0) {
-                        boardList.innerHTML = "<li class='board-item'><span class='board-title'>보드가 없습니다. + 버튼으로 새 보드를 만드세요.</span></li>";
-                    }
-                })
-                .catch((err) => alert(err.message));
         }
 
         // 보드 만들기
@@ -244,6 +227,16 @@
         });
 
         loadBoards();
+
+        // 내 보드 기록 버튼 - 스냅샷 페이지로 이동
+        $("#snapshot-btn").click(function () {
+            window.location.href = "/snapshot";
+        });
+
+        // 공개된 보드 기록 버튼 - publicList 페이지로 이동
+        $("#publicList-btn").click(function () {
+            window.location.href = "/publicList";
+        });
     </script>
 
 

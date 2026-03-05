@@ -152,6 +152,7 @@ def list_mine():
     def _serialize(doc):
         return {
             "id": str(doc["_id"]),
+            "title": doc.get("title", ""),  
             "image_url": f"/api/snapshots/{doc['_id']}/image",
             "is_public": doc.get("is_public", False),
             "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
@@ -311,3 +312,40 @@ def update_snapshot(snapshot_id: str):
 
     db["snapshots"].update_one({"_id": oid}, {"$set": {"is_public": bool(new_is_public)}})
     return jsonify({"id": str(oid), "is_public": new_is_public}), 200
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/snapshots/<id> - 스냅샷 삭제
+# ---------------------------------------------------------------------------
+@snapshots_bp.route("/<snapshot_id>", methods=["DELETE"])
+@jwt_required()
+def delete_snapshot(snapshot_id: str):
+    """스냅샷 삭제. 소유자만 가능."""
+    user_id = _get_current_user_id()
+    if not user_id:
+        return jsonify({"error": {"code": "UNAUTHORIZED", "message": "로그인이 필요합니다.", "details": {}}}), 401
+
+    db = getattr(current_app, "db", None)
+    if db is None:
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "DB not configured."}}), 500
+
+    try:
+        oid = ObjectId(snapshot_id)
+    except Exception:
+        return jsonify({
+            "error": {"code": "SNAPSHOT_NOT_FOUND", "message": "스냅샷을 찾을 수 없습니다.", "details": {}}
+        }), 404
+
+    snap = db["snapshots"].find_one({"_id": oid})
+    if not snap:
+        return jsonify({
+            "error": {"code": "SNAPSHOT_NOT_FOUND", "message": "스냅샷을 찾을 수 없습니다.", "details": {}}
+        }), 404
+
+    if str(snap["board_owner_id"]) != str(user_id):
+        return jsonify({
+            "error": {"code": "FORBIDDEN", "message": "스냅샷 소유자만 삭제할 수 있습니다.", "details": {}}
+        }), 403
+
+    db["snapshots"].delete_one({"_id": oid})
+    return "", 204

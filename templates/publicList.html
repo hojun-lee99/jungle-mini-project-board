@@ -21,23 +21,32 @@
             </button>
 
             <nav class="sidebar-nav">
-                <a class="nav-item" href="#">
+                <a class="nav-item" href="/main" id="main-boards-btn">
+                    <span class="material-symbols-outlined" id="mainBoardsIcon">dashboard</span>
+                    <span class="txt" id="mainBoardsText">내가 만든 보드</span>
+                </a>
+                <button class="nav-item" id="snapshot-btn">
                     <span class="material-symbols-outlined" id="myArchiveIcon">
                         archive
                     </span>
                     <span class="txt" id="myArchiveText">내 보드 기록</span>
-                </a>
-                <a class="nav-item is-active" href="#">
+                </button>
+                <button class="nav-item is-active" id="publicList-btn">
                     <span class="material-symbols-outlined" id="publicArchiveIcon">
                         public
                     </span>
                     <span class="txt" id="publicArchiveText">
                         공개된 보드 기록
                     </span>
-                </a>
+                </button>
             </nav>
 
             <div class="sidebar-bottom">
+                <button class="nav-item" id="home-btn">
+                    <span class="material-symbols-outlined" id="homeIcon">
+                        home
+                    </span>
+                </button>
                 <button class="logout">
                     <span class="material-symbols-outlined">
                         logout
@@ -112,9 +121,32 @@
 
                 btn.setAttribute("aria-expanded", String(!collapsed));
                 toggleIcon.textContent = collapsed ? "arrow_forward_ios" : "arrow_back_ios";
+                document.getElementById("mainBoardsText").textContent = collapsed ? "" : "내가 만든 보드";
                 myArchiveText.textContent = collapsed ? "" : "내 보드 기록";
                 publicArchiveText.textContent = collapsed ? "" : "공개된 보드 기록";
                 logoutText.textContent = collapsed ? "" : "로그아웃";
+            });
+
+            // 로그아웃
+            document.querySelector(".logout").addEventListener("click", () => {
+                fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+                    .then(() => { window.location.href = "/"; })
+                    .catch(() => alert("로그아웃에 실패했습니다."));
+            });
+
+            // 내 보드 기록 버튼 - 스냅샷 페이지로 이동
+            $("#snapshot-btn").click(function () {
+                window.location.href = "/snapshot";
+            });
+
+            // 공개된 보드 기록 버튼 - publicList 페이지로 이동
+            $("#publicList-btn").click(function () {
+                window.location.href = "/publicList";
+            });
+
+            // 홈버튼 - main 페이지로 이동
+            $("#home-btn").click(function () {
+                window.location.href = "/main";
             });
         </script>
 

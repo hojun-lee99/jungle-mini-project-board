@@ -64,6 +64,15 @@ def main():
     """로그인 후 내 보드 목록 페이지."""
     return render_template('main.html')
 
+@app.route('/snapshot')
+def snapshot():
+    """내 보드 기록(스냅샷) 페이지."""
+    return render_template('snapshot.html')
+
+@app.route('/publicList')
+def publicList():
+    """공개된 보드 기록 페이지."""
+    return render_template('publicList.html')
 
 @app.route('/boards/<public_id>')
 def board_page(public_id: str):

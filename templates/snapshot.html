@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+        integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <title>내 보드 기록</title>
+    <link href="../static/css/snapshot.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+</head>
+
+<body>
+    <div class="layout">
+        <aside class="sidebar" id="sidebar">
+            <button class="sidebar-toggle" id="toggleBtn" aria-expanded="true">
+                <span class="material-symbols-outlined" id="toggleIcon">
+                    arrow_back_ios
+                </span>
+            </button>
+
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="/main" id="main-boards-btn">
+                    <span class="material-symbols-outlined" id="mainBoardsIcon">dashboard</span>
+                    <span class="txt" id="mainBoardsText">내가 만든 보드</span>
+                </a>
+                <button class="nav-item is-active" href="#" id="snapshot-btn">
+                    <span class="material-symbols-outlined" id="myArchiveIcon">
+                        archive
+                    </span>
+                    <span class="txt" id="myArchiveText">내 보드 기록</span>
+                </button>
+                <button class="nav-item" href="#" id="publicList-btn">
+                    <span class="material-symbols-outlined" id="publicArchiveIcon">
+                        public
+                    </span>
+                    <span class="txt" id="publicArchiveText">
+                        공개된 보드 기록
+                    </span>
+                </button>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <button class="nav-item" id="home-btn">
+                    <span class="material-symbols-outlined" id="homeIcon">
+                        home
+                    </span>
+                </button>
+                <button class="logout">
+                    <span class="material-symbols-outlined">
+                        logout
+                    </span>
+                    <span id="logoutText">로그아웃</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="content">
+            <h1>내 보드 기록</h1>
+            <div class="content-body">
+                <ul class="board-grid" id="card-list">
+
+                </ul>
+            </div>
+        </main>
+
+        <!-- 이미지 확대 뷰 모달 -->
+        <div class="image-lightbox" id="image-lightbox" aria-hidden="true">
+            <div class="image-lightbox-backdrop"></div>
+            <div class="image-lightbox-content">
+                <button type="button" class="image-lightbox-close" aria-label="닫기">&times;</button>
+                <img class="image-lightbox-img" src="" alt="확대 보기" />
+            </div>
+        </div>
+        <script>
+            const sidebar = document.getElementById("sidebar");
+            const btn = document.getElementById("toggleBtn");
+            const toggleIcon = document.getElementById("toggleIcon");
+            const myArchiveText = document.getElementById("myArchiveText");
+            const publicArchiveText = document.getElementById("publicArchiveText");
+            const logoutText = document.getElementById("logoutText");
+
+            btn.addEventListener("click", () => {
+                const collapsed = sidebar.classList.toggle("is-collapsed");
+
+                btn.setAttribute("aria-expanded", String(!collapsed));
+                toggleIcon.textContent = collapsed ? "arrow_forward_ios" : "arrow_back_ios";
+                document.getElementById("mainBoardsText").textContent = collapsed ? "" : "내가 만든 보드";
+                myArchiveText.textContent = collapsed ? "" : "내 보드 기록";
+                publicArchiveText.textContent = collapsed ? "" : "공개된 보드 기록";
+                logoutText.textContent = collapsed ? "" : "로그아웃";
+            });
+
+            // 로그아웃
+            document.querySelector(".logout").addEventListener("click", () => {
+                fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+                    .then(() => { window.location.href = "/"; })
+                    .catch(() => alert("로그아웃에 실패했습니다."));
+            });
+
+            // 내 보드 기록 버튼 - 스냅샷 페이지로 이동
+            $("#snapshot-btn").click(function () {
+                window.location.href = "/snapshot";
+            });
+
+            // 공개된 보드 기록 버튼 - publicList 페이지로 이동
+            $("#publicList-btn").click(function () {
+                window.location.href = "/publicList";
+            });
+
+            // 홈버튼 - main 페이지로 이동
+            $("#home-btn").click(function () {
+                window.location.href = "/main";
+            });
+
+
+            // 새로고침 할 때마다 스냅샷 리스트 조회
+            $(document).ready(function () { showSnapshots() });
+
+            function showSnapshots() {
+                $.ajax({
+                    type: "GET",
+                    url: "/api/snapshots/mine",
+                    data: {},
+                    success: function (response) {
+                        console.log(response);
+                        let shots = response["snapshots"];
+                        for (let i = 0; i < shots.length; i++) {
+                            makeSnapshotCard(shots[i]["id"], shots[i]["title"], shots[i]["image_url"], shots[i]["is_public"]);
+                        }
+                        //list.forEach((snapshot) => makeSnapshotCard(snapshot));
+                    },
+                    error: function (xhr) {
+                        const msg = xhr.responseJSON?.error?.message || "스냅샷 목록을 불러오지 못했습니다.";
+                        alert(msg);
+                    }
+                }
+                )
+            }
+
+            function makeSnapshotCard(id, title, image_url, is_public) {
+                const checked = is_public ? "checked" : "";
+
+                let tempHtml =
+                    ` <li class="board-card" data-snapshot-id="${id}">
+                        <div class="board-thumb board-thumb-clickable" data-image-url="${image_url}"><img src="${image_url}"></div>
+                        <div class="board-footer">
+                            <div class="board-name">${title || "제목 없음"}</div>
+                            <div class="board-footer-actions">
+                                <div class="board-public">
+                                    <span>공개여부</span>
+                                    <input type="checkbox" ${checked}>
+                                </div>
+                                <button type="button" class="board-delete-btn" data-snapshot-id="${id}" title="삭제">삭제</button>
+                            </div>
+                        </div>
+                    </li>`;
+
+                $("#card-list").append(tempHtml);
+            }
+
+            // 이미지 클릭 시 확대 보기
+            $(document).on("click", ".board-thumb-clickable", function () {
+                const url = $(this).data("image-url");
+                if (!url) return;
+                $("#image-lightbox .image-lightbox-img").attr("src", url);
+                $("#image-lightbox").addClass("is-open").attr("aria-hidden", "false");
+            });
+            function closeImageLightbox() {
+                $("#image-lightbox").removeClass("is-open").attr("aria-hidden", "true");
+                $("#image-lightbox .image-lightbox-img").attr("src", "");
+            }
+            $("#image-lightbox .image-lightbox-backdrop, #image-lightbox .image-lightbox-close").on("click", closeImageLightbox);
+            $(document).on("keydown", function (e) {
+                if (e.key === "Escape" && $("#image-lightbox").hasClass("is-open")) closeImageLightbox();
+            });
+
+            // 삭제 버튼
+            $(document).on("click", ".board-delete-btn", function (e) {
+                e.stopPropagation();
+                const id = $(this).data("snapshot-id");
+                if (!id || !confirm("이 보드 기록을 삭제하시겠습니까?")) return;
+                const $card = $(this).closest(".board-card");
+                $.ajax({
+                    type: "DELETE",
+                    url: "/api/snapshots/" + id,
+                    credentials: "include",
+                    success: function () {
+                        $card.fadeOut(200, function () { $(this).remove(); });
+                    },
+                    error: function (xhr) {
+                        const msg = xhr.responseJSON?.error?.message || "삭제에 실패했습니다.";
+                        alert(msg);
+                    }
+                });
+            });
+        </script>
+
+
+</body>
+
+</html>

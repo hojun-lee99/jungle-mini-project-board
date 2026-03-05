@@ -6,6 +6,7 @@
     <title>크래프톤 정글 - 보드</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
     <!-- 손글씨 폰트 추가해서 css분리 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/board.css') }}">
@@ -29,7 +30,7 @@
       <div class="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 header-clickable shrink-0">
         <a href="#" id="btn-login" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition shadow-sm no-underline shrink-0 order-first" style="display:none; background-color:#05D182; color:white; text-decoration:none;" title="로그인">로그인</a>
         <button id="btn-add-note" class="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium transition shadow-sm shrink-0" title="새 포스트잇">+</button>
-        <button id="btn-share" class="hover:scale-110 transition transform">
+        <button id="btn-share" class="hover:scale-110 transition transform" title="링크 공유하기">
           <img
             src="{{ url_for('static', filename='icons/share.svg') }}"
             alt="공유"
@@ -46,16 +47,14 @@
             src="{{ url_for('static', filename='icons/image.svg') }}"
             alt="이미지 추가"
             class="w-9 h-9"
-            style="filter: invert(52%) sepia(82%) saturate(1964%) hue-rotate(124deg) brightness(96%) contrast(97%);"
           />
         </button>
 
-        <button id="btn-menu" class="hover:scale-110 transition transform">
+        <button id="btn-menu" class="hover:scale-110 transition transform" title="메뉴">
           <img
             src="{{ url_for('static', filename='icons/menu.svg') }}"
             alt="메뉴"
             class="w-10 h-10"
-            style="filter: invert(52%) sepia(82%) saturate(1964%) hue-rotate(124deg) brightness(96%) contrast(97%);"
           />
         </button>
       </div>
@@ -100,6 +99,31 @@
           <span class="wingbar-item-icon">🔗</span>
           <span>링크 재발급</span>
         </button>
+        <button type="button" id="wingbar-delete-board" class="wingbar-item wingbar-item-btn" style="display:none;">
+          <span class="wingbar-item-icon">🗑</span>
+          <span>보드 삭제</span>
+        </button>
+        <div class="wingbar-section wingbar-section-compact">
+          <h3 class="wingbar-section-title">글자 설정</h3>
+          <div class="font-setting-row">
+            <label for="note-font-size" class="font-setting-label">글자 크기</label>
+            <div class="font-size-control">
+              <input type="range" id="note-font-size" min="12" max="24" value="16" class="font-size-slider" />
+              <span id="note-font-size-value" class="font-size-value">16px</span>
+            </div>
+          </div>
+          <div class="font-setting-row">
+            <label for="note-font-family" class="font-setting-label">글자 폰트</label>
+            <select id="note-font-family" class="font-family-select">
+              <option value="BoardHandFont, sans-serif">손글씨</option>
+              <option value="&quot;Malgun Gothic&quot;, sans-serif">맑은 고딕</option>
+              <option value="Dotum, sans-serif">돋움</option>
+              <option value="Batang, serif">바탕체</option>
+              <option value="Gulim, sans-serif">굴림</option>
+              <option value="system-ui, sans-serif">시스템 기본</option>
+            </select>
+          </div>
+        </div>
         <div class="wingbar-section">
           <h3 class="wingbar-section-title">내가 쓴 메모</h3>
           <ul class="wingbar-note-list" id="wingbar-my-notes"></ul>
@@ -113,6 +137,19 @@
         </div>
       </div>
     </aside>
+
+    <!-- 보드 삭제 확인 모달 (보드 생성자만) -->
+    <div class="note-modal" id="board-delete-modal" aria-hidden="true">
+      <div class="note-modal-backdrop" data-close="true"></div>
+      <div class="note-modal-panel">
+        <h3 class="note-modal-title">보드 삭제</h3>
+        <p class="note-modal-hint">보드를 삭제하시겠습니까? 현재 상태가 스냅샷으로 저장되어 내 보드 기록에서 확인할 수 있습니다.</p>
+        <div class="note-modal-actions">
+          <button type="button" id="board-delete-cancel" class="note-modal-btn note-modal-btn-secondary">취소</button>
+          <button type="button" id="board-delete-confirm" class="note-modal-btn note-modal-btn-primary">삭제</button>
+        </div>
+      </div>
+    </div>
 
     <!-- 링크 재발급 확인 모달 (보드 생성자만) -->
     <div class="note-modal" id="link-regenerate-modal" aria-hidden="true">
