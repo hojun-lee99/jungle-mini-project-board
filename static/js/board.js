@@ -349,7 +349,8 @@ $(document).ready(function () {
     openNoteDetailModal(noteId);
   });
 
-  let pendingNotePosition = null; // 더블클릭 시 생성 위치 저장 (null이면 + 버튼, center 사용)
+  let pendingNotePosition = null; // 더블클릭 시 생성 위치 저장 (null이면 + 버튼 경로)
+  let lastMousePos = null; // 마지막 마우스 위치 (키보드로 추가 시 폴백용)
 
   function showLoginRequiredModal() {
     $('#login-required-modal').addClass('is-open').attr('aria-hidden', 'false');
@@ -371,6 +372,10 @@ $(document).ready(function () {
     $('#note-modal-text').val('').focus();
   }
 
+  $(document).on('mousemove', function (e) {
+    lastMousePos = { clientX: e.clientX, clientY: e.clientY };
+  });
+
   $('#btn-add-note').on('click', function () {
     openNoteModal(null);
   });
@@ -381,7 +386,7 @@ $(document).ready(function () {
   );
   $('#note-modal-cancel').on('click', closeNoteModal);
 
-  $(document).on('click', '#note-modal-confirm', function () {
+  $(document).on('click', '#note-modal-confirm', function (e) {
     const text = String($('#note-modal-text').val() || '').trim() || '새 메모';
     const pos = pendingNotePosition;
     closeNoteModal();
@@ -391,8 +396,29 @@ $(document).ready(function () {
       x = Math.max(20, pos.x);
       y = Math.max(20, pos.y);
     } else {
-      x = Math.max(20, Math.floor(window.innerWidth / 2 - rect.left - 80));
-      y = Math.max(20, Math.floor(window.innerHeight / 2 - rect.top - 50));
+      const getPosFromCoords = (cx, cy) => {
+        if (cx === 0 && cy === 0) return null;
+        const mx = cx - rect.left;
+        const my = cy - rect.top;
+        return mx >= 0 && mx <= rect.width && my >= 0 && my <= rect.height
+          ? { x: Math.max(20, mx), y: Math.max(20, my) }
+          : null;
+      };
+      const isKeyboardTrigger = e.detail === 0;
+      const fromClick = !isKeyboardTrigger ? getPosFromCoords(e.clientX, e.clientY) : null;
+      const fromLastMouse = lastMousePos ? getPosFromCoords(lastMousePos.clientX, lastMousePos.clientY) : null;
+      const centerX = Math.max(20, Math.floor(window.innerWidth / 2 - rect.left - 80));
+      const centerY = Math.max(20, Math.floor(window.innerHeight / 2 - rect.top - 50));
+      if (fromClick) {
+        x = fromClick.x;
+        y = fromClick.y;
+      } else if (fromLastMouse) {
+        x = fromLastMouse.x;
+        y = fromLastMouse.y;
+      } else {
+        x = centerX;
+        y = centerY;
+      }
     }
     createNote(x, y, text);
   });
