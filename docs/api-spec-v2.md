@@ -316,6 +316,12 @@
 
 ## 4. 포스트잇 API
 
+**이미지 필드**
+- `image_key`: 업로드 API(5.1) 응답의 `image_key`. 생성/수정 시 이미지 지정용. 응답에는 포함하지 않음.
+- `image_url`: 이미지 표시용 URL. `GET /api/boards/{public_id}/images/{image_ref}` 형식. public_id 변경 시 예전 URL은 404.
+
+---
+
 ### 4.1 포스트잇 생성
 
 **POST** `/api/boards/{public_id}/notes`
@@ -443,7 +449,7 @@
 
 ---
 
-## 5. 이미지 업로드 API
+## 5. 이미지 API
 
 ### 5.1 이미지 업로드 (포스트잇용)
 
@@ -470,11 +476,49 @@
 }
 ```
 
+- `image_key`: 서버 내부 저장 키. 클라이언트는 POST /notes 요청 시 이 값을 사용. 노출하지 않음.
+- `url`: 이미지 조회 URL. `GET /api/boards/{public_id}/images/{image_ref}` 형식. 이 URL을 사용해 이미지를 표시.
+
+**저장 구조**
+- 실제 파일은 `board_id`(MongoDB _id) 기준으로 저장. `public_id`가 변경되어도 기존 이미지 참조 유지.
+- 내부 경로 예: `uploads/boards/{board_id}/{filename}`. `board_id`는 클라이언트에 노출하지 않음.
+
 **에러**
 
 - `400`: 허용 확장자 아님, 3MB 초과, 이미지 아님
 - `401`: 비인증
 - `404`: `BOARD_NOT_FOUND` — 유효하지 않은 보드 링크
+
+---
+
+### 5.2 이미지 조회 (서빙)
+
+**GET** `/api/boards/{public_id}/images/{image_ref}`
+
+| 구분 | 내용 |
+| ---- | ---- |
+| 인증 | 불필요 (보드 접근 가능한 누구나) |
+| 설명 | 포스트잇에 첨부된 이미지 바이너리 반환 |
+
+**파라미터**
+- `public_id`: 보드의 public_id
+- `image_ref`: 이미지 참조 식별자 (업로드 응답의 url에서 추출. 예측 불가능한 값)
+
+**성공 응답** `200 OK`
+- `Content-Type`: `image/jpeg` | `image/png` | `image/gif`
+- Body: 이미지 바이너리
+
+**처리**
+1. `public_id`로 보드 존재 확인
+2. 해당 보드 내 포스트잇 중 `image_ref`에 해당하는 이미지 검색
+3. 파일 반환
+
+**에러**
+- `404`: `BOARD_NOT_FOUND` 또는 `IMAGE_NOT_FOUND` — `public_id`가 변경된 경우 예전 URL은 404 (접근 차단)
+
+**보안**
+- URL에 `public_id` 포함. `public_id` 변경 시 예전 이미지 URL은 모두 404.
+- `board_id`는 URL에 포함하지 않음.
 
 ---
 
