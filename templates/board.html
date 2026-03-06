@@ -32,12 +32,13 @@
       <button id="btn-add-note"
         class="material-symbols-outlined flex items-center justify-center w-9 h-9 rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium transition shadow-sm shrink-0"
         title="새 포스트잇">add</button>
-      <button id="btn-share" class="hover:scale-110 transition transform" title="링크 공유하기">
-        <img src="{{ url_for('static', filename='icons/share.svg') }}" alt="공유" class="w-9 h-9" />
-      </button>
 
       <button id="btn-add-image" class="hover:scale-110 transition transform" title="이미지 추가 모드 (클릭 후 보드에서 위치 선택)">
         <img src="{{ url_for('static', filename='icons/image.svg') }}" alt="이미지 추가" class="w-9 h-9" />
+      </button>
+
+      <button id="btn-share" class="hover:scale-110 transition transform" title="링크 공유하기">
+        <img src="{{ url_for('static', filename='icons/share.svg') }}" alt="공유" class="w-9 h-9" />
       </button>
 
       <button id="btn-menu" class="hover:scale-110 transition transform" title="메뉴">
