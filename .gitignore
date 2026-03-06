@@ -16,3 +16,5 @@ local/
 
 # 업로드된 이미지
 static/uploads/
+
+nohup.out
