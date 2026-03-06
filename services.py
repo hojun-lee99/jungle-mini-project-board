@@ -1,8 +1,13 @@
 # 비즈니스 로직과 db 접근과 관련된 코드 작성
+import re
 from pymongo import MongoClient
 from config import Config
 import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# 회원가입 허용 문자: username=영문대소문자/숫자/한글/_, password=영문대소문자/숫자/!@#$%^&*()-
+USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9가-힣_]+$")
+PASSWORD_PATTERN = re.compile(r"^[a-zA-Z0-9!@#$%^&*()\-_]+$")
 
 #!!! 
 # 로컬 db 설정에 맞춰 수정 필요
@@ -41,9 +46,15 @@ def register_user(data):
 
   if len(username) < 2 or len(username) > 20:
     return {"error": "아이디는 2자 이상 20자 이하로 입력해주세요."}, 422
-  
+
+  if not USERNAME_PATTERN.fullmatch(username):
+    return {"error": "아이디는 영문 대소문자, 숫자, 한글만 사용 가능합니다."}, 422
+
   if len(password) < 8 or len(password) > 50:
     return {"error": "비밀번호는 8자 이상 50자 이하로 입력해주세요."}, 422
+
+  if not PASSWORD_PATTERN.fullmatch(password):
+    return {"error": "비밀번호는 영문 대소문자, 숫자, !@#$%^&*()-_ 만 사용 가능합니다."}, 422
   
   if db.users.find_one({"username": username}):
     return {"error": "이미 존재하는 아이디입니다."}, 400
