@@ -7,198 +7,318 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"
         integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
     <title>내 보드 기록</title>
-    <link href="../static/css/snapshot.css" rel="stylesheet" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Pretendard -->
+    <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+
+    <!-- Material Symbols -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+
+
+    <!-- <link href="../static/css/snapshot.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" /> -->
 </head>
+<style>
+    body {
+        font-family: 'Pretendard', sans-serif;
+    }
 
-<body>
-    <div class="layout">
-        <aside class="sidebar" id="sidebar">
-            <button class="sidebar-toggle" id="toggleBtn" aria-expanded="true">
-                <span class="material-symbols-outlined" id="toggleIcon">
-                    arrow_back_ios
-                </span>
-            </button>
+    .material-symbols-outlined {
+        font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24;
+    }
+</style>
 
-            <nav class="sidebar-nav">
-                <a class="nav-item" href="/main" id="main-boards-btn">
-                    <span class="material-symbols-outlined" id="mainBoardsIcon">dashboard</span>
-                    <span class="txt" id="mainBoardsText">내가 만든 보드</span>
-                </a>
-                <button class="nav-item is-active" href="#" id="snapshot-btn">
-                    <span class="material-symbols-outlined" id="myArchiveIcon">
-                        archive
-                    </span>
-                    <span class="txt" id="myArchiveText">내 보드 기록</span>
+<body class="bg-slate-50 text-slate-900">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar"
+            class="w-64 shrink-0 border-r border-slate-200 bg-white transition-all duration-200 ease-in-out">
+            <div class="flex h-full flex-col p-3">
+                <button id="toggleBtn" aria-expanded="true"
+                    class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100">
+                    <span class="material-symbols-outlined" id="toggleIcon">arrow_back_ios</span>
                 </button>
-                <button class="nav-item" href="#" id="publicList-btn">
-                    <span class="material-symbols-outlined" id="publicArchiveIcon">
-                        public
-                    </span>
-                    <span class="txt" id="publicArchiveText">
-                        공개된 보드 기록
-                    </span>
-                </button>
-            </nav>
 
-            <div class="sidebar-bottom">
-                <button class="nav-item" id="home-btn">
-                    <span class="material-symbols-outlined" id="homeIcon">
-                        home
-                    </span>
-                </button>
-                <button class="logout">
-                    <span class="material-symbols-outlined">
-                        logout
-                    </span>
-                    <span id="logoutText">로그아웃</span>
-                </button>
+                <nav class="flex flex-col gap-2">
+                    <a href="/main" id="main-boards-btn"
+                        class="nav-item flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        <span class="material-symbols-outlined">dashboard</span>
+                        <span class="txt whitespace-nowrap" id="mainBoardsText">내가 만든 보드</span>
+                    </a>
+
+                    <button id="snapshot-btn"
+                        class="nav-item is-active flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600">
+                        <span class="material-symbols-outlined">archive</span>
+                        <span class="txt whitespace-nowrap" id="myArchiveText">내 보드 기록</span>
+                    </button>
+
+                    <button id="publicList-btn"
+                        class="nav-item flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        <span class="material-symbols-outlined">public</span>
+                        <span class="txt whitespace-nowrap" id="publicArchiveText">공개된 보드 기록</span>
+                    </button>
+                </nav>
+
+                <div class="mt-auto space-y-2 pt-4">
+                    <!-- <button id="home-btn"
+                        class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        <span class="material-symbols-outlined">home</span>
+                        <span class="whitespace-nowrap" id="homeText">홈</span>
+                    </button> -->
+                    <div class="sidebar-bottom mt-auto pt-4">
+                        <button
+                            class="logout flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-red-500">
+                            <span class="material-symbols-outlined">
+                                logout
+                            </span>
+                            <span id="logoutText" class="whitespace-nowrap">로그아웃</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </aside>
 
-        <main class="content">
-            <h1>내 보드 기록</h1>
-            <div class="content-body">
-                <ul class="board-grid" id="card-list">
+        <!-- Content -->
+        <main class="flex min-w-0 flex-1 flex-col p-6 md:p-8">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">내 보드 기록</h1>
+            </div>
+
+            <div class="flex-1 overflow-y-auto">
+                <ul id="card-list" class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     {% for s in snapshots|default([]) %}
-                    <li class="board-card" data-snapshot-id="{{ s.id }}">
-                        <div class="board-thumb board-thumb-clickable" data-image-url="{{ s.image_url }}">
-                            <img src="{{ s.image_url }}" alt="">
+                    <li class="board-card group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                        data-snapshot-id="{{ s.id }}">
+
+                        <div class="board-thumb board-thumb-clickable relative aspect-[4/3] cursor-pointer overflow-hidden bg-slate-200"
+                            data-image-url="{{ s.image_url }}">
+                            <img src="{{ s.image_url }}" alt="{{ s.title or '제목 없음' }}"
+                                class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
+
+                            <div
+                                class="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/20">
+                                <span
+                                    class="material-symbols-outlined rounded-full bg-white/90 p-2 text-slate-700 opacity-0 shadow transition group-hover:opacity-100">
+                                    zoom_in
+                                </span>
+                            </div>
                         </div>
-                        <div class="board-footer">
-                            <div class="board-name">{{ s.title or "제목 없음" }}</div>
-                            <div class="board-footer-actions">
-                                <div class="board-public">
-                                    <span>공개여부</span>
-                                    <input type="checkbox" class="public-toggle" data-id="{{ s.id }}" {% if s.is_public
-                                        %}checked{% endif %}>
+
+                        <div class="p-4">
+                            <div class="mb-3">
+                                <div class="truncate text-base font-semibold text-slate-800">
+                                    {{ s.title or "제목 없음" }}
                                 </div>
-                                <button type="button" class="board-delete-btn" data-snapshot-id="{{ s.id }}"
-                                    title="삭제">삭제</button>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3">
+                                <label class="flex items-center gap-2 text-sm text-slate-600">
+                                    <span class="whitespace-nowrap">공개여부</span>
+                                    <input type="checkbox"
+                                        class="public-toggle h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400"
+                                        data-id="{{ s.id }}" {% if s.is_public %}checked{% endif %}>
+                                </label>
+
+                                <button type="button"
+                                    class="board-delete-btn inline-flex items-center justify-center rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600"
+                                    data-snapshot-id="{{ s.id }}" title="삭제">
+                                    삭제
+                                </button>
                             </div>
                         </div>
                     </li>
                     {% endfor %}
                 </ul>
+
                 {% if not snapshots %}
-                <p class="snapshot-empty" id="snapshot-empty">보드 기록이 없습니다.</p>
+                <div id="snapshot-empty"
+                    class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-sm">
+                    <div
+                        class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                        <span class="material-symbols-outlined">archive</span>
+                    </div>
+                    <p class="text-base font-semibold text-slate-700">보드 기록이 없습니다</p>
+                    <p class="mt-1 text-sm text-slate-500">보드를 삭제하면 기록이 여기에 표시됩니다.</p>
+                </div>
                 {% endif %}
             </div>
         </main>
+    </div>
 
-        <!-- 이미지 확대 뷰 모달 -->
-        <div class="image-lightbox" id="image-lightbox" aria-hidden="true">
-            <div class="image-lightbox-backdrop"></div>
-            <div class="image-lightbox-content">
-                <button type="button" class="image-lightbox-close" aria-label="닫기">&times;</button>
-                <img class="image-lightbox-img" src="" alt="확대 보기" />
+    <!-- Image Lightbox, 이미지 확대 뷰 모달  -->
+    <div id="image-lightbox" aria-hidden="true"
+        class="pointer-events-none fixed inset-0 z-50 opacity-0 transition duration-200">
+        <div class="image-lightbox-backdrop absolute inset-0 bg-black/70"></div>
+
+        <div
+            class="image-lightbox-content absolute left-1/2 top-1/2 w-[calc(100vw-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2">
+            <button type="button"
+                class="image-lightbox-close absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-800 shadow hover:bg-slate-100"
+                aria-label="닫기">
+                <span class="text-2xl leading-none">&times;</span>
+            </button>
+
+            <div class="overflow-hidden rounded-2xl bg-white shadow-2xl">
+                <img class="image-lightbox-img max-h-[80vh] w-full object-contain bg-slate-100" src="" alt="확대 보기" />
             </div>
         </div>
-        <script>
-            const sidebar = document.getElementById("sidebar");
-            const btn = document.getElementById("toggleBtn");
-            const toggleIcon = document.getElementById("toggleIcon");
-            const myArchiveText = document.getElementById("myArchiveText");
-            const publicArchiveText = document.getElementById("publicArchiveText");
-            const logoutText = document.getElementById("logoutText");
+    </div>
 
-            btn.addEventListener("click", () => {
-                const collapsed = sidebar.classList.toggle("is-collapsed");
+    <script>
+        const sidebar = document.getElementById("sidebar");
+        const btn = document.getElementById("toggleBtn");
+        const toggleIcon = document.getElementById("toggleIcon");
+        const mainBoardsText = document.getElementById("mainBoardsText");
+        const myArchiveText = document.getElementById("myArchiveText");
+        const publicArchiveText = document.getElementById("publicArchiveText");
+        const logoutText = document.getElementById("logoutText");
+        const homeText = document.getElementById("homeText");
 
-                btn.setAttribute("aria-expanded", String(!collapsed));
-                toggleIcon.textContent = collapsed ? "arrow_forward_ios" : "arrow_back_ios";
-                document.getElementById("mainBoardsText").textContent = collapsed ? "" : "내가 만든 보드";
-                myArchiveText.textContent = collapsed ? "" : "내 보드 기록";
-                publicArchiveText.textContent = collapsed ? "" : "공개된 보드 기록";
-                logoutText.textContent = collapsed ? "" : "로그아웃";
+        btn.addEventListener("click", () => {
+            sidebar.classList.toggle("w-64");
+            sidebar.classList.toggle("w-20");
+
+            const isCollapsed = sidebar.classList.contains("w-20");
+
+            btn.setAttribute("aria-expanded", String(!isCollapsed));
+            toggleIcon.textContent = isCollapsed ? "arrow_forward_ios" : "arrow_back_ios";
+
+            mainBoardsText.textContent = isCollapsed ? "" : "내가 만든 보드";
+            myArchiveText.textContent = isCollapsed ? "" : "내 보드 기록";
+            publicArchiveText.textContent = isCollapsed ? "" : "공개된 보드 기록";
+            logoutText.textContent = isCollapsed ? "" : "로그아웃";
+            homeText.textContent = isCollapsed ? "" : "홈";
+        });
+
+        // 로그아웃
+        document.querySelector(".logout").addEventListener("click", () => {
+            fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+                .then(() => { window.location.href = "/"; })
+                .catch(() => alert("로그아웃에 실패했습니다."));
+        });
+
+        // 내 보드 기록 버튼
+        $("#snapshot-btn").click(function () {
+            window.location.href = "/snapshot";
+        });
+
+        // 공개된 보드 기록 버튼
+        $("#publicList-btn").click(function () {
+            window.location.href = "/publicList";
+        });
+
+        // // 홈 버튼
+        // $("#home-btn").click(function () {
+        //     window.location.href = "/main";
+        // });
+
+        // 공개 여부 토글, 이벤트 위임: SSR로 렌더된 체크박스 작동
+        $(document).on("change", ".public-toggle", function () {
+            const snapshotId = $(this).data("id");
+            const isPublic = $(this).is(":checked");
+            const $toggle = $(this);
+
+            $toggle.prop("disabled", true);
+
+            $.ajax({
+                type: "PATCH",
+                url: `/api/snapshots/${snapshotId}`,
+                contentType: "application/json",
+                data: JSON.stringify({ is_public: isPublic }),
+                xhrFields: {
+                    withCredentials: true
+                },
+                success: function () {
+                    // 성공 시 그대로 유지
+                },
+                error: function (xhr) {
+                    const msg = xhr.responseJSON?.error?.message || "공개 여부 변경에 실패했습니다.";
+                    alert(msg);
+                    $toggle.prop("checked", !isPublic);
+                },
+                complete: function () {
+                    $toggle.prop("disabled", false);
+                }
             });
+        });
 
-            // 로그아웃
-            document.querySelector(".logout").addEventListener("click", () => {
-                fetch("/api/auth/logout", { method: "POST", credentials: "include" })
-                    .then(() => { window.location.href = "/"; })
-                    .catch(() => alert("로그아웃에 실패했습니다."));
-            });
+        // 이미지 클릭 시 확대 보기
+        $(document).on("click", ".board-thumb-clickable", function () {
+            const url = $(this).data("image-url");
+            if (!url) return;
 
-            // 내 보드 기록 버튼 - 스냅샷 페이지로 이동
-            $("#snapshot-btn").click(function () {
-                window.location.href = "/snapshot";
-            });
+            $("#image-lightbox .image-lightbox-img").attr("src", url);
+            $("#image-lightbox")
+                .removeClass("pointer-events-none opacity-0")
+                .addClass("pointer-events-auto opacity-100")
+                .attr("aria-hidden", "false");
+        });
 
-            // 공개된 보드 기록 버튼 - publicList 페이지로 이동
-            $("#publicList-btn").click(function () {
-                window.location.href = "/publicList";
-            });
+        function closeImageLightbox() {
+            $("#image-lightbox")
+                .addClass("pointer-events-none opacity-0")
+                .removeClass("pointer-events-auto opacity-100")
+                .attr("aria-hidden", "true");
 
-            // 홈버튼 - main 페이지로 이동
-            $("#home-btn").click(function () {
-                window.location.href = "/main";
-            });
+            $("#image-lightbox .image-lightbox-img").attr("src", "");
+        }
 
+        $("#image-lightbox .image-lightbox-backdrop, #image-lightbox .image-lightbox-close").on("click", closeImageLightbox);
 
-            // 이벤트 위임: SSR로 렌더된 체크박스 작동
-            $(document).on("change", ".public-toggle", function () {
-                const snapshotId = $(this).data("id");
-                const isPublic = $(this).is(":checked");
-                $.ajax({
-                    type: "PATCH",
-                    url: `/api/snapshots/${snapshotId}`,
-                    contentType: "application/json",
-                    data: JSON.stringify({ is_public: isPublic }),
-                    credentials: "include",
-                    success: function () {
-                        // 성공: 그대로 유지
-                    },
-                    error: function (xhr) {
-                        // 실패: 체크 상태 원복
-                        const msg = xhr.responseJSON?.error?.message || "공개 여부 변경에 실패했습니다.";
-                        alert(msg);
-                        $(`.public-toggle[data-id="${snapshotId}"]`).prop("checked", !isPublic);
-                    },
-                    complete: function () {
-                        $(`.public-toggle[data-id="${snapshotId}"]`).prop("disabled", false);
-                    }
-                });
-            });
-
-            // 이미지 클릭 시 확대 보기
-            $(document).on("click", ".board-thumb-clickable", function () {
-                const url = $(this).data("image-url");
-                if (!url) return;
-                $("#image-lightbox .image-lightbox-img").attr("src", url);
-                $("#image-lightbox").addClass("is-open").attr("aria-hidden", "false");
-            });
-            function closeImageLightbox() {
-                $("#image-lightbox").removeClass("is-open").attr("aria-hidden", "true");
-                $("#image-lightbox .image-lightbox-img").attr("src", "");
+        $(document).on("keydown", function (e) {
+            if (e.key === "Escape" && $("#image-lightbox").attr("aria-hidden") === "false") {
+                closeImageLightbox();
             }
-            $("#image-lightbox .image-lightbox-backdrop, #image-lightbox .image-lightbox-close").on("click", closeImageLightbox);
-            $(document).on("keydown", function (e) {
-                if (e.key === "Escape" && $("#image-lightbox").hasClass("is-open")) closeImageLightbox();
+        });
+
+        // 삭제 버튼
+        $(document).on("click", ".board-delete-btn", function (e) {
+            e.stopPropagation();
+
+            const id = $(this).data("snapshot-id");
+            if (!id || !confirm("이 보드 기록을 삭제하시겠습니까?")) return;
+
+            const $card = $(this).closest(".board-card");
+
+            $.ajax({
+                type: "DELETE",
+                url: "/api/snapshots/" + id,
+                xhrFields: {
+                    withCredentials: true
+                },
+                success: function () {
+                    $card.fadeOut(200, function () {
+                        $(this).remove();
+
+                        if ($("#card-list .board-card").length === 0) {
+                            $("#card-list").after(`
+                                <div id="snapshot-empty"
+                                    class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-sm">
+                                    <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                                        <span class="material-symbols-outlined">archive</span>
+                                    </div>
+                                    <p class="text-base font-semibold text-slate-700">보드 기록이 없습니다</p>
+                                    <p class="mt-1 text-sm text-slate-500">보드를 삭제하면 기록이 여기에 표시됩니다.</p>
+                                </div>
+                            `);
+                        }
+                    });
+                },
+                error: function (xhr) {
+                    const msg = xhr.responseJSON?.error?.message || "삭제에 실패했습니다.";
+                    alert(msg);
+                }
             });
-
-            // 삭제 버튼
-            $(document).on("click", ".board-delete-btn", function (e) {
-                e.stopPropagation();
-                const id = $(this).data("snapshot-id");
-                if (!id || !confirm("이 보드 기록을 삭제하시겠습니까?")) return;
-                const $card = $(this).closest(".board-card");
-                $.ajax({
-                    type: "DELETE",
-                    url: "/api/snapshots/" + id,
-                    credentials: "include",
-                    success: function () {
-                        $card.fadeOut(200, function () { $(this).remove(); });
-                    },
-                    error: function (xhr) {
-                        const msg = xhr.responseJSON?.error?.message || "삭제에 실패했습니다.";
-                        alert(msg);
-                    }
-                });
-            });
-        </script>
-
-
+        });
+    </script>
 </body>
 
 </html>
