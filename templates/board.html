@@ -29,9 +29,11 @@
       <a href="#" id="btn-login"
         class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition shadow-sm no-underline shrink-0 order-first"
         style="display:none; background-color:#05D182; color:white; text-decoration:none;" title="로그인">로그인</a>
-      <button id="btn-add-note"
-        class="material-symbols-outlined flex items-center justify-center w-9 h-9 rounded-lg bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium transition shadow-sm shrink-0"
-        title="새 포스트잇">add</button>
+      <button id="btn-add-note" 
+        class="flex items-center justify-center w-9 h-9 rounded-lg transition shrink-0 hover:scale-110 transform" 
+        title="새 포스트잇">
+        <img src="{{ url_for('static', filename='icons/add.svg') }}" alt="새 포스트잇" class="w-6 h-6" />
+      </button>
 
       <button id="btn-add-image" class="hover:scale-110 transition transform" title="이미지 추가 모드 (클릭 후 보드에서 위치 선택)">
         <img src="{{ url_for('static', filename='icons/image.svg') }}" alt="이미지 추가" class="w-9 h-9" />
