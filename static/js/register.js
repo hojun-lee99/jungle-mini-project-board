@@ -52,11 +52,11 @@ $(document).ready(function() {
 
     function checkValidate(username, password, pwdConfirm){
         if(username.length < 2 || username.length > 20) {
-            showError("아이디는 2자 이상 20자 이하로 입력해주세요.");
+            showError("이름은 2자 이상 20자 이하로 입력해주세요.");
             return false;
         }
         if (!usernamePattern.test(username)) {
-            showError("아이디는 영문 대소문자, 숫자, 한글, _ 만 사용 가능합니다.");
+            showError("이름은 영문 대소문자, 숫자, 한글, _ 만 사용 가능합니다.");
             return false;
         }
         if (password.length < 8 || password.length > 50) {

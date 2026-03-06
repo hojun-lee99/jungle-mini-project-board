@@ -20,12 +20,12 @@ def login_user(data):
   password = data.get('password')
 
   if not username or not password:
-    return {"error": "username과 password는 필수 입력값입니다."}, 422
+    return {"error": "이름과 비밀번호는 필수 입력값입니다."}, 422
   
   user = db.users.find_one({"username": username})
 
   if not user or not check_password_hash(user['password'], password):
-    return {"error": "아이디 또는 비밀번호가 일치하지 않습니다."}, 401
+    return {"error": "이름 또는 비밀번호가 일치하지 않습니다."}, 401
   
   return {
     "user_id": user["user_id"],
@@ -39,16 +39,16 @@ def register_user(data):
   password = data.get('password')
 
   if not username or not password:
-    return {"error": "아이디와 비밀번호는 필수 입력값입니다."}, 422
+    return {"error": "이름과 비밀번호는 필수 입력값입니다."}, 422
   
   if type(username) is not str or type(password) is not str:
     return {"error": "잘못된 데이터 형식입니다."}, 422
 
   if len(username) < 2 or len(username) > 20:
-    return {"error": "아이디는 2자 이상 20자 이하로 입력해주세요."}, 422
+    return {"error": "이름은 2자 이상 20자 이하로 입력해주세요."}, 422
 
   if not USERNAME_PATTERN.fullmatch(username):
-    return {"error": "아이디는 영문 대소문자, 숫자, 한글만 사용 가능합니다."}, 422
+    return {"error": "이름은 영문 대소문자, 숫자, 한글만 사용 가능합니다."}, 422
 
   if len(password) < 8 or len(password) > 50:
     return {"error": "비밀번호는 8자 이상 50자 이하로 입력해주세요."}, 422
@@ -57,7 +57,7 @@ def register_user(data):
     return {"error": "비밀번호는 영문 대소문자, 숫자, !@#$%^&*()-_ 만 사용 가능합니다."}, 422
   
   if db.users.find_one({"username": username}):
-    return {"error": "이미 존재하는 아이디입니다."}, 400
+    return {"error": "이미 존재하는 이름입니다."}, 400
   
   user_id = str(uuid.uuid4())
   hased_pw = generate_password_hash(password)
