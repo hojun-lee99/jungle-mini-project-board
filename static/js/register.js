@@ -47,16 +47,27 @@ $(document).ready(function() {
         $errorBox.removeClass('hidden');
     }
 
+    const usernamePattern = /^[a-zA-Z0-9가-힣_]+$/;
+    const passwordPattern = /^[a-zA-Z0-9!@#$%^&*()\-_]+$/;
+
     function checkValidate(username, password, pwdConfirm){
         if(username.length < 2 || username.length > 20) {
-            showError("이름은 2자 이상 20자 이하로 입력해주세요.");
+            showError("아이디는 2자 이상 20자 이하로 입력해주세요.");
             return false;
         }
-        else if (password.length < 8 || password.length > 50) {
+        if (!usernamePattern.test(username)) {
+            showError("아이디는 영문 대소문자, 숫자, 한글, _ 만 사용 가능합니다.");
+            return false;
+        }
+        if (password.length < 8 || password.length > 50) {
             showError("비밀번호는 8자 이상 50자 이하로 입력해주세요.");
             return false;
         }
-        else if (password !== pwdConfirm) {
+        if (!passwordPattern.test(password)) {
+            showError("비밀번호는 영문 대소문자, 숫자, !@#$%^&*()-_ 만 사용 가능합니다.");
+            return false;
+        }
+        if (password !== pwdConfirm) {
             showError("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
             return false;
         }
