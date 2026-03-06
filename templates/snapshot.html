@@ -70,9 +70,11 @@
                             <div class="board-footer-actions">
                                 <div class="board-public">
                                     <span>공개여부</span>
-                                    <input type="checkbox" class="public-toggle" data-id="{{ s.id }}" {% if s.is_public %}checked{% endif %}>
+                                    <input type="checkbox" class="public-toggle" data-id="{{ s.id }}" {% if s.is_public
+                                        %}checked{% endif %}>
                                 </div>
-                                <button type="button" class="board-delete-btn" data-snapshot-id="{{ s.id }}" title="삭제">삭제</button>
+                                <button type="button" class="board-delete-btn" data-snapshot-id="{{ s.id }}"
+                                    title="삭제">삭제</button>
                             </div>
                         </div>
                     </li>

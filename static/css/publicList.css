@@ -69,7 +69,7 @@
   'opsz' 24
 }
 
-div {
+div, .nav-item, .logout {
     font-family: 'Pretendard';
 }
 

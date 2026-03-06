@@ -69,7 +69,7 @@
   'opsz' 24
 }
 
-div {
+div, .nav-item, .logout, .board-delete-btn {
     font-family: 'Pretendard';
 }
 
